@@ -2793,3 +2793,70 @@ a:focus-visible {
       var(--lc9, 120px);
   }
 }
+
+/* ====================================================================
+ * 20. 拖动列宽后的布局修正
+ * - 单元格 min-width:0（此前缺，拖动收窄后内容溢出压到邻列）
+ * - 末列弹性补位：列宽总和小于视口时填满、无空白尾巴；大于视口时横向滚动
+ * - 表头内边距与数据行对齐
+ * ==================================================================== */
+.col-metric,
+.col-load,
+.col-live,
+.col-net,
+.col-life,
+.col-traffic {
+  min-width: 0;
+}
+.node-list {
+  width: max-content;
+  min-width: 100%;
+}
+.node-list-row {
+  grid-template-columns:
+    var(--lc0, 220px)
+    var(--lc1, 130px)
+    var(--lc2, 100px)
+    var(--lc3, 100px)
+    var(--lc4, 100px)
+    var(--lc5, 90px)
+    var(--lc6, 110px)
+    var(--lc7, 130px)
+    var(--lc8, 100px)
+    minmax(var(--lc9, 120px), 1fr);
+}
+.node-list-row.node-list-head {
+  padding: 8px 14px;
+}
+.node-list-head-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 1180px) {
+  .node-list-row {
+    grid-template-columns:
+      var(--lc0, 220px)
+      var(--lc1, 130px)
+      var(--lc2, 100px)
+      var(--lc3, 100px)
+      var(--lc4, 100px)
+      var(--lc5, 90px)
+      var(--lc6, 110px)
+      var(--lc7, 130px)
+      minmax(var(--lc9, 120px), 1fr);
+  }
+}
+@media (max-width: 1000px) {
+  .node-list-row {
+    grid-template-columns:
+      var(--lc0, 220px)
+      var(--lc1, 130px)
+      var(--lc2, 100px)
+      var(--lc3, 100px)
+      var(--lc4, 100px)
+      var(--lc6, 110px)
+      var(--lc7, 130px)
+      minmax(var(--lc9, 120px), 1fr);
+  }
+}
