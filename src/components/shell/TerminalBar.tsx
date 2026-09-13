@@ -160,7 +160,6 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
       </div>
       <nav className="primary">
         {navLink("/", t("nav.status"))}
-        {navLink("/assets", t("nav.assets"))}
         {navLink("/traffic", t("nav.traffic"))}
       </nav>
       {colorsMounted && (

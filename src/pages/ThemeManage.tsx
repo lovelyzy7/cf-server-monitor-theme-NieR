@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { useCarrierNames, usePublicConfig } from "@/hooks/usePublicConfig";
 import { useLocalThemeSettings } from "@/hooks/useThemeSettings";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useLanguage } from "@/hooks/useLanguage";
-import { saveThemeOptions } from "@/services/api";
+import { getNodes, saveThemeOptions } from "@/services/api";
 import { getJwtToken } from "@/services/cfsm/config";
 import { ApiRequestError } from "@/services/cfsm/http";
 import { carrierPingTasks } from "@/services/cfsm/mappers";
@@ -15,10 +16,8 @@ import {
   saveLocalThemeSettings,
 } from "@/services/themeSettingsStore";
 import { copyText } from "@/utils/clipboard";
-import {
-  normalizeCostIgnoredNodes,
-  normalizeCostRateApiUrl,
-} from "@/utils/cost";
+import { normalizeCostIgnoredNodes } from "@/utils/cost";
+import { dedupeGroupLabels, normalizeHomeGroupOrder, sortHomeGroupOptions } from "@/utils/homeNodes";
 import { normalizeThemeSettings, withPreferredAppearance, type ResolvedThemeSettings } from "@/utils/themeSettings";
 import { HOME_SORT_FIELDS, HOME_SORT_FIELD_LABELS } from "@/utils/homeSort";
 import type { ThemeSettings } from "@/types/cfsm";
@@ -34,6 +33,21 @@ const VIEW_MODE_OPTIONS = [
   { value: "mini", label: "迷你卡片" },
   { value: "list", label: "列表" },
 ] as const;
+
+/** 表格（LIST 视图）可开关的列；节点列始终显示。 */
+const LIST_COLUMN_OPTIONS = [
+  { key: "os", label: "系统" },
+  { key: "cpu", label: "CPU" },
+  { key: "mem", label: "内存" },
+  { key: "disk", label: "磁盘" },
+  { key: "load", label: "负载" },
+  { key: "live", label: "实时" },
+  { key: "traffic", label: "流量" },
+  { key: "net", label: "网络" },
+  { key: "life", label: "在线/到期" },
+] as const;
+
+const GRID_COLUMN_OPTIONS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 /** 本页管理的设置键（草稿与签名都从它派生）。 */
 function pickDraft(s: ResolvedThemeSettings) {
@@ -51,21 +65,15 @@ function pickDraft(s: ResolvedThemeSettings) {
     showRegionBar: s.showRegionBar,
     showCardGroup: s.showCardGroup,
     showCardPrice: s.showCardPrice,
-    showOverviewRatings: s.showOverviewRatings,
-    showTrafficRating: s.showTrafficRating,
-    showBandwidthRating: s.showBandwidthRating,
-    showAssetRating: s.showAssetRating,
     compactShowTrafficTotal: s.compactShowTrafficTotal,
-    compactShowBilling: s.compactShowBilling,
     compactShowUptime: s.compactShowUptime,
     showConnections: s.showConnections,
     enableHomeSort: s.enableHomeSort,
     homeSortField: s.homeSortField,
     homeSortDirection: s.homeSortDirection,
-    showCostSummary: s.showCostSummary,
-    showCostSummaryFloatingButton: s.showCostSummaryFloatingButton,
-    costRateApiUrl: s.costRateApiUrl,
-    costIgnoredNodes: s.costIgnoredNodes,
+    homeGroupOrder: s.homeGroupOrder,
+    gridColumns: s.gridColumns,
+    listColumns: s.listColumns,
     hiddenNodes: s.hiddenNodes,
     surfaceOpacity: s.surfaceOpacity,
   };
@@ -128,11 +136,38 @@ export function ThemeManage() {
 
   const pingTasks = useMemo(() => carrierPingTasks(carrierNames), [carrierNames]);
 
+  // 分组顺序拖拽：从节点元数据里取分组列表。
+  const { data: nodeMeta } = useQuery({
+    queryKey: ["theme-manage", "node-meta"],
+    queryFn: ({ signal }) => getNodes({ signal }),
+    staleTime: 60_000,
+    retry: 1,
+  });
+  const availableGroups = useMemo(
+    () => dedupeGroupLabels((nodeMeta ?? []).map((node) => node.group)),
+    [nodeMeta],
+  );
+  const orderedGroups = useMemo(
+    () => sortHomeGroupOptions(availableGroups, draft.homeGroupOrder),
+    [availableGroups, draft.homeGroupOrder],
+  );
+  const [dragGroup, setDragGroup] = useState<string | null>(null);
+  const dropGroupOn = (target: string) => {
+    if (!dragGroup || dragGroup === target) return;
+    const next = [...draft.homeGroupOrder];
+    const fromIndex = next.indexOf(dragGroup);
+    if (fromIndex >= 0) next.splice(fromIndex, 1);
+    const toIndex = next.indexOf(target);
+    if (toIndex >= 0) next.splice(toIndex, 0, dragGroup);
+    else next.push(dragGroup);
+    patch("homeGroupOrder", next);
+    setDragGroup(null);
+  };
+
   const draftThemeSettings = useMemo<ThemeSettings>(() => ({
     ...draft,
-    costIgnoredNodes: normalizeCostIgnoredNodes(draft.costIgnoredNodes),
     hiddenNodes: normalizeCostIgnoredNodes(draft.hiddenNodes),
-    costRateApiUrl: normalizeCostRateApiUrl(draft.costRateApiUrl),
+    homeGroupOrder: normalizeHomeGroupOrder(draft.homeGroupOrder),
   }), [draft]);
 
   const handleSaveLocal = async () => {
@@ -209,12 +244,10 @@ export function ThemeManage() {
     setError(null);
   };
 
-  // 忽略节点 / 隐藏节点草稿用文本域编辑，提交时归一化回数组。
-  const [ignoredText, setIgnoredText] = useState(() => sourceSettings.costIgnoredNodes.join("\n"));
+  // 隐藏节点草稿用文本域编辑，提交时归一化回数组。
   const [hiddenText, setHiddenText] = useState(() => sourceSettings.hiddenNodes.join("\n"));
   useEffect(() => {
     if (!isDirty) {
-      setIgnoredText(sourceSettings.costIgnoredNodes.join("\n"));
       setHiddenText(sourceSettings.hiddenNodes.join("\n"));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -323,18 +356,63 @@ export function ThemeManage() {
         <ToggleRow label="显示地区统计" desc="按地区聚合" checked={draft.showRegionBar} onPatch={(v) => patch("showRegionBar", v)} />
         <ToggleRow label="卡片显示分组" checked={draft.showCardGroup} onPatch={(v) => patch("showCardGroup", v)} />
         <ToggleRow label="卡片显示价格" checked={draft.showCardPrice} onPatch={(v) => patch("showCardPrice", v)} />
-        <ToggleRow label="总览评级" desc="流量/带宽/资产概览的评级标签" checked={draft.showOverviewRatings} onPatch={(v) => patch("showOverviewRatings", v)} />
-        <ToggleRow label="流量评级" checked={draft.showTrafficRating} onPatch={(v) => patch("showTrafficRating", v)} />
-        <ToggleRow label="带宽评级" checked={draft.showBandwidthRating} onPatch={(v) => patch("showBandwidthRating", v)} />
-        <ToggleRow label="资产评级" checked={draft.showAssetRating} onPatch={(v) => patch("showAssetRating", v)} />
+      </div>
+
+      <div className="panel panel-corners" style={{ marginTop: 16 }}>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>卡片布局（几乘几）</h2>
+        <div className="tab-bar">
+          {GRID_COLUMN_OPTIONS.map((count) => (
+            <button key={count} type="button" className={clsx("tab-btn", draft.gridColumns === count && "active")} onClick={() => patch("gridColumns", count)}>
+              {count === 0 ? "自动" : `${count} 列`}
+            </button>
+          ))}
+        </div>
+        <p style={{ fontSize: 11, color: "var(--fg-mid)", marginTop: 8 }}>
+          「自动」按卡片最小宽度自适配列数；选固定列数后，首页大/小/迷你卡片都按该列数排列。
+        </p>
+      </div>
+
+      <div className="panel panel-corners" style={{ marginTop: 16 }}>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>分组顺序（拖动排序）</h2>
+        {orderedGroups.length === 0 ? (
+          <p style={{ fontSize: 12, color: "var(--fg-mid)", margin: 0 }}>节点还没有配置分组。</p>
+        ) : (
+          <div className="group-order-list">
+            {orderedGroups.map((group) => (
+              <div
+                key={group}
+                className="group-order-item"
+                draggable
+                onDragStart={() => setDragGroup(group)}
+                onDragEnd={() => setDragGroup(null)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => dropGroupOn(group)}
+              >
+                <span className="group-order-handle" aria-hidden>≡</span>
+                <span>{group}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
         <h2 className="bracket-header" style={{ fontSize: 14 }}>小卡片与列表</h2>
         <ToggleRow label="小卡显示累计流量" checked={draft.compactShowTrafficTotal} onPatch={(v) => patch("compactShowTrafficTotal", v)} />
-        <ToggleRow label="小卡显示费用到期" checked={draft.compactShowBilling} onPatch={(v) => patch("compactShowBilling", v)} />
         <ToggleRow label="小卡显示在线时长" checked={draft.compactShowUptime} onPatch={(v) => patch("compactShowUptime", v)} />
         <ToggleRow label="显示连接数" desc="TCP/UDP（需探针上报）" checked={draft.showConnections} onPatch={(v) => patch("showConnections", v)} />
+      </div>
+
+      <div className="panel panel-corners" style={{ marginTop: 16 }}>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>表格列（LIST 视图）</h2>
+        {LIST_COLUMN_OPTIONS.map((column) => (
+          <ToggleRow
+            key={column.key}
+            label={column.label}
+            checked={draft.listColumns[column.key] !== false}
+            onPatch={(v) => patch("listColumns", { ...draft.listColumns, [column.key]: v })}
+          />
+        ))}
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
@@ -354,22 +432,9 @@ export function ThemeManage() {
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>费用与资产</h2>
-        <ToggleRow label="启用资产统计页" desc="/assets 路由入口" checked={draft.showCostSummary} onPatch={(v) => patch("showCostSummary", v)} />
-        <ToggleRow label="首页显示资产浮动入口" checked={draft.showCostSummaryFloatingButton} onPatch={(v) => patch("showCostSummaryFloatingButton", v)} />
-        <div style={{ marginTop: 12 }}>
-          <label style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>汇率源 URL</label>
-          <input type="text" value={draft.costRateApiUrl} onChange={(e) => patch("costRateApiUrl", e.target.value)} style={{ width: "100%" }} />
-        </div>
-        <div style={{ marginTop: 12 }}>
-          <label style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>忽略节点（每行一个名称或 UUID）</label>
-          <textarea
-            value={ignoredText}
-            onChange={(e) => { setIgnoredText(e.target.value); patch("costIgnoredNodes", normalizeCostIgnoredNodes(e.target.value.split("\n"))); }}
-            rows={4}
-            style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: 12, background: "var(--bg-cream)", border: "var(--border-thin)", color: "var(--fg-dark)", padding: "8px 10px" }}
-          />
-        </div>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>其他</h2>
+        <ToggleRow label="显示管理后台入口" desc="顶栏 ADMIN 按钮" checked={draft.enableAdminButton} onPatch={(v) => patch("enableAdminButton", v)} />
+        <ToggleRow label="详情页显示 Ping 图表" checked={draft.showPingChart} onPatch={(v) => patch("showPingChart", v)} />
         <div style={{ marginTop: 12 }}>
           <label style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>隐藏节点（每行一个名称或 UUID）</label>
           <textarea
@@ -379,12 +444,6 @@ export function ThemeManage() {
             style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: 12, background: "var(--bg-cream)", border: "var(--border-thin)", color: "var(--fg-dark)", padding: "8px 10px" }}
           />
         </div>
-      </div>
-
-      <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>其他</h2>
-        <ToggleRow label="显示管理后台入口" desc="顶栏 ADMIN 按钮" checked={draft.enableAdminButton} onPatch={(v) => patch("enableAdminButton", v)} />
-        <ToggleRow label="详情页显示 Ping 图表" checked={draft.showPingChart} onPatch={(v) => patch("showPingChart", v)} />
         <div style={{ marginTop: 12 }}>
           <label style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>卡片不透明度（{draft.surfaceOpacity}%）</label>
           <input

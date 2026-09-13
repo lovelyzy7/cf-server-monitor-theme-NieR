@@ -1,5 +1,7 @@
 import { Fragment, Suspense, lazy, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQueries } from "@tanstack/react-query";
+import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
 import { Spinner } from "@/components/ui/Spinner";
 import { useMinuteClock } from "@/hooks/useClock";
@@ -7,13 +9,21 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTodayTrafficStats } from "@/hooks/useTodayTrafficStats";
 import { useVisibleNodes } from "@/hooks/useVisibleNodes";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useAuth } from "@/hooks/useAuth";
+import { getLoadRecords } from "@/services/api";
 import { formatByteRateLabel, formatBytes } from "@/utils/format";
+import {
+  buildTodayTrafficRecordSamples,
+  summarizeTodayTrafficRecords,
+  type TodayTrafficSample,
+  type TodayTrafficStat,
+} from "@/utils/trafficStats";
 import type { NodeInfo } from "@/types/cfsm";
-import type { TodayTrafficSample, TodayTrafficStat } from "@/utils/trafficStats";
 
 const DAY_FORMATTER = new Intl.DateTimeFormat("zh-CN", { month: "long", day: "numeric", weekday: "short" });
 const TIME_FORMATTER = new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
 const TRAFFIC_MOBILE_QUERY = "(max-width: 720px)";
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const TrafficRateChart = lazy(() =>
   import("@/components/traffic/TrafficRateChart").then((module) => ({ default: module.TrafficRateChart })),
@@ -23,6 +33,45 @@ interface TrafficDetail {
   node: NodeInfo;
   stat: TodayTrafficStat;
   total: number;
+}
+
+type TrafficSortField = "name" | "total" | "peakUp" | "peakDown";
+type TrafficSortDirection = "asc" | "desc";
+
+const TRAFFIC_TABLE_COLUMNS: Array<{ field: TrafficSortField; label: string; numeric?: boolean }> = [
+  { field: "name", label: "节点" },
+  { field: "total", label: "当日流量", numeric: true },
+  { field: "peakUp", label: "上行峰值", numeric: true },
+  { field: "peakDown", label: "下行峰值", numeric: true },
+];
+
+const NATURAL_DIRECTION: Record<TrafficSortField, TrafficSortDirection> = {
+  name: "asc",
+  total: "desc",
+  peakUp: "desc",
+  peakDown: "desc",
+};
+
+function localDayStart(now: number): number {
+  const date = new Date(now);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+/** 后端支持的时长档位；给区间前后各留 1 小时采样基准。 */
+function hoursTierForRange(startMs: number, endMs: number): number {
+  const elapsedHours = Math.max(1, Math.ceil((endMs - startMs) / 3_600_000) + 1);
+  const tiers = [24, 48, 96, 168];
+  return tiers.find((hours) => hours >= elapsedHours) ?? 168;
+}
+
+function sortDetailValue(detail: TrafficDetail, field: TrafficSortField): number | string {
+  switch (field) {
+    case "name": return detail.node.name;
+    case "total": return detail.total;
+    case "peakUp": return detail.stat.peakUp;
+    case "peakDown": return detail.stat.peakDown;
+  }
 }
 
 function formatPeakTime(timeMs: number | null, value: number) {
@@ -66,13 +115,13 @@ function TrafficDetailToggle({ expanded, onClick }: { expanded: boolean; control
 
 function TrafficSampleChart({ id, samples }: { id: string; samples: TodayTrafficSample[] }) {
   return (
-    <section id={id} className="panel" aria-label="本日网络上下行明细" style={{ marginTop: 8 }}>
+    <section id={id} className="panel" aria-label="网络上下行明细" style={{ marginTop: 8 }}>
       <header style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-        <strong style={{ letterSpacing: "0.12em", textTransform: "uppercase", fontSize: 13 }}>本日网络上下行</strong>
+        <strong style={{ letterSpacing: "0.12em", textTransform: "uppercase", fontSize: 13 }}>当日网络上下行</strong>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>{samples.length} 个采样</span>
       </header>
       {samples.length === 0 ? (
-        <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>本日暂无速率采样</div>
+        <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>当日暂无速率采样</div>
       ) : (
         <Suspense fallback={<div style={{ padding: "20px 0", textAlign: "center" }}><Spinner size={18} /></div>}>
           <TrafficRateChart samples={samples} />
@@ -84,28 +133,77 @@ function TrafficSampleChart({ id, samples }: { id: string; samples: TodayTraffic
 
 export function Traffic() {
   const [expandedUuid, setExpandedUuid] = useState<string | null>(null);
+  const [dayOffset, setDayOffset] = useState(0);
+  const [sortField, setSortField] = useState<TrafficSortField>("total");
+  const [sortDirection, setSortDirection] = useState<TrafficSortDirection>("desc");
   const now = useMinuteClock();
   const { t } = useLanguage();
+  const { data: me } = useAuth();
   const isMobileLayout = useMediaQuery(TRAFFIC_MOBILE_QUERY);
   const nodes = useVisibleNodes();
   const uuids = useMemo(() => nodes.map((node) => node.uuid), [nodes]);
-  const trafficQuery = useTodayTrafficStats(uuids, now);
+  // 未登录访客查不了超过 24 小时的历史，往期只给登录用户。
+  const maxDayOffset = me?.logged_in ? 6 : 0;
+  const effectiveOffset = Math.min(dayOffset, maxDayOffset);
+
+  const dayStartMs = localDayStart(now) - effectiveOffset * DAY_MS;
+  const dayEndMs = dayStartMs + DAY_MS;
+
+  const todayQuery = useTodayTrafficStats(uuids, now);
+  // 往期：逐节点拉对应档位历史，按当天窗口积分（与今日同一套口径）。
+  const hours = hoursTierForRange(dayStartMs, dayEndMs);
+  const pastQueries = useQueries({
+    queries: uuids.map((uuid) => ({
+      queryKey: ["traffic-day", uuid, dayStartMs],
+      queryFn: ({ signal }: { signal: AbortSignal }) => getLoadRecords(uuid, hours, { signal }),
+      enabled: effectiveOffset > 0,
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    })),
+  });
+  const pastData = useMemo(() => {
+    if (effectiveOffset === 0) return null;
+    const rows: TodayTrafficStat[] = [];
+    const samplesByUuid: Record<string, TodayTrafficSample[]> = {};
+    uuids.forEach((uuid, index) => {
+      const records = pastQueries[index]?.data?.records ?? [];
+      rows.push(summarizeTodayTrafficRecords(uuid, records, dayStartMs, dayEndMs));
+      samplesByUuid[uuid] = buildTodayTrafficRecordSamples(records, dayStartMs, dayEndMs);
+    });
+    return { rows, samplesByUuid, rangeStartMs: dayStartMs, rangeEndMs: dayEndMs };
+  }, [dayEndMs, dayStartMs, effectiveOffset, pastQueries, uuids]);
+
+  const data = effectiveOffset === 0 ? todayQuery.data : pastData;
+  const isPending = effectiveOffset === 0 ? todayQuery.isPending : pastQueries.some((query) => query.isPending);
+  const isError = effectiveOffset === 0 ? todayQuery.isError : pastQueries.some((query) => query.isError);
+  const isFetching = effectiveOffset === 0 ? todayQuery.isFetching : pastQueries.some((query) => query.isFetching);
+  const refetch = () => {
+    if (effectiveOffset === 0) void todayQuery.refetch();
+    else for (const query of pastQueries) void query.refetch();
+  };
+
   const details = useMemo<TrafficDetail[]>(() => {
-    const stats = new Map(trafficQuery.data?.rows.map((row) => [row.uuid, row] as const));
-    return nodes
-      .map((node) => {
-        const stat = stats.get(node.uuid) ?? {
-          uuid: node.uuid, trafficUp: 0, trafficDown: 0, peakUp: 0, peakUpAt: null, peakDown: 0, peakDownAt: null, sampleCount: 0, hasSamples: false,
-        };
-        return { node, stat, total: stat.trafficUp + stat.trafficDown };
-      })
-      .sort(
-        (left, right) =>
-          Number(right.stat.hasSamples) - Number(left.stat.hasSamples) ||
-          right.total - left.total ||
-          left.node.weight - right.node.weight,
-      );
-  }, [nodes, trafficQuery.data?.rows]);
+    const stats = new Map((data?.rows ?? []).map((row) => [row.uuid, row] as const));
+    const base = nodes.map((node) => {
+      const stat = stats.get(node.uuid) ?? {
+        uuid: node.uuid, trafficUp: 0, trafficDown: 0, peakUp: 0, peakUpAt: null, peakDown: 0, peakDownAt: null, sampleCount: 0, hasSamples: false,
+      };
+      return { node, stat, total: stat.trafficUp + stat.trafficDown };
+    });
+    const direction = sortDirection === "asc" ? 1 : -1;
+    base.sort((left, right) => {
+      if (left.stat.hasSamples !== right.stat.hasSamples) return left.stat.hasSamples ? -1 : 1;
+      if (sortField === "name") {
+        return left.node.name.localeCompare(right.node.name, "zh-CN") * direction || left.node.weight - right.node.weight;
+      }
+      const a = sortDetailValue(left, sortField) as number;
+      const b = sortDetailValue(right, sortField) as number;
+      if (a !== b) return (a - b) * direction;
+      return left.node.weight - right.node.weight;
+    });
+    return base;
+  }, [data?.rows, nodes, sortDirection, sortField]);
+
   const { sampledDetails, totalUp, totalDown, peakUp, peakDown } = useMemo(() => {
     const sampled = details.filter((detail) => detail.stat.hasSamples);
     return {
@@ -116,39 +214,62 @@ export function Traffic() {
       peakDown: sampled.reduce<TrafficDetail | null>((best, detail) => (!best || detail.stat.peakDown > best.stat.peakDown ? detail : best), null),
     };
   }, [details]);
-  const updatedAt = trafficQuery.data?.rangeEndMs ?? now;
+  const updatedAt = data?.rangeEndMs ?? now;
+
+  const handleSort = (field: TrafficSortField) => {
+    if (field === sortField) setSortDirection((value) => (value === "asc" ? "desc" : "asc"));
+    else {
+      setSortField(field);
+      setSortDirection(NATURAL_DIRECTION[field]);
+    }
+  };
+  const directionIcon = sortDirection === "asc" ? "▲" : "▼";
 
   return (
     <div>
-      <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+      <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <Link className="button" to="/">{t("common.back")}</Link>
-        <button type="button" onClick={() => void trafficQuery.refetch()} disabled={trafficQuery.isFetching || nodes.length === 0} aria-busy={trafficQuery.isFetching} title={t("common.refresh")}>
+        <button type="button" onClick={refetch} disabled={isFetching || nodes.length === 0} aria-busy={isFetching} title={t("common.refresh")}>
           ⟳ {t("common.refresh")}
         </button>
       </div>
 
       <h1 className="bracket-header">{t("title.traffic")}</h1>
 
+      <div className="tab-bar" style={{ marginTop: 8 }}>
+        {Array.from({ length: maxDayOffset + 1 }, (_, offset) => (
+          <button
+            key={offset}
+            type="button"
+            className={clsx("tab-btn", effectiveOffset === offset && "active")}
+            aria-pressed={effectiveOffset === offset}
+            onClick={() => setDayOffset(offset)}
+          >
+            {offset === 0 ? "今天" : offset === 1 ? "昨天" : `${offset} 天前`}
+          </button>
+        ))}
+      </div>
+
       {nodes.length === 0 ? (
         <div className="center-box" style={{ minHeight: "40vh" }}>
           <span style={{ color: "var(--fg-mid)" }}>{t("common.nodata")}</span>
         </div>
-      ) : trafficQuery.isPending ? (
+      ) : isPending ? (
         <div className="center-box" style={{ minHeight: "40vh" }}>
           <Spinner size={24} />
         </div>
-      ) : trafficQuery.isError ? (
+      ) : isError ? (
         <div className="banner error" role="alert">
-          &gt; ERROR :: 无法读取今日流量统计
-          <div style={{ marginTop: 8 }}><button type="button" onClick={() => void trafficQuery.refetch()}>重新加载</button></div>
+          &gt; ERROR :: 无法读取流量统计
+          <div style={{ marginTop: 8 }}><button type="button" onClick={refetch}>{t("common.retry")}</button></div>
         </div>
       ) : (
         <>
           <div className="traffic-summary-grid">
             <div className="panel inverse panel-corners traffic-summary-card">
               <div className="traffic-summary-head">
-                <span>今日流量</span>
-                <span>{DAY_FORMATTER.format(now)}</span>
+                <span>当日流量</span>
+                <span>{DAY_FORMATTER.format(dayStartMs)}</span>
               </div>
               <strong className="traffic-summary-total">
                 {sampledDetails.length > 0 ? formatBytes(totalUp + totalDown) : "—"}
@@ -161,7 +282,7 @@ export function Traffic() {
 
             <div className="panel inverse panel-corners traffic-summary-card">
               <div className="traffic-summary-head">
-                <span>今日采样峰值</span>
+                <span>当日采样峰值</span>
                 <span>统计至 {TIME_FORMATTER.format(updatedAt)}</span>
               </div>
               <div className="traffic-summary-peak-list">
@@ -182,10 +303,13 @@ export function Traffic() {
               <table className="monitor assets-table">
                 <thead>
                   <tr>
-                    <th>节点</th>
-                    <th data-numeric>今日流量</th>
-                    <th data-numeric>上行峰值</th>
-                    <th data-numeric>下行峰值</th>
+                    {TRAFFIC_TABLE_COLUMNS.map((column) => (
+                      <th key={column.field} data-numeric={column.numeric || undefined} aria-sort={sortField === column.field ? (sortDirection === "asc" ? "ascending" : "descending") : undefined}>
+                        <button type="button" onClick={() => handleSort(column.field)} data-active={sortField === column.field}>
+                          {column.label}{sortField === column.field && ` ${directionIcon}`}
+                        </button>
+                      </th>
+                    ))}
                     <th data-action>操作</th>
                   </tr>
                 </thead>
@@ -193,12 +317,12 @@ export function Traffic() {
                   {details.map(({ node, stat, total }) => {
                     const expanded = expandedUuid === node.uuid;
                     const detailId = `traffic-detail-${node.uuid}`;
-                    const samples = trafficQuery.data?.samplesByUuid[node.uuid] ?? [];
+                    const samples = (effectiveOffset === 0 ? todayQuery.data?.samplesByUuid : pastData?.samplesByUuid)?.[node.uuid] ?? [];
                     return (
                       <Fragment key={node.uuid}>
                         <tr>
                           <td>
-                            <Link to={`/server/${encodeURIComponent(node.uuid)}`} style={{ display: "inline-flex", alignItems: "center", gap: 8 }} title={node.name}>
+                            <Link to={`/server/${encodeURIComponent(node.uuid)}`} className="assets-node-link" title={node.name}>
                               <Flag region={node.region} size={12} />
                               <span>{node.name}</span>
                             </Link>
@@ -235,11 +359,11 @@ export function Traffic() {
               {details.map(({ node, stat, total }) => {
                 const expanded = expandedUuid === node.uuid;
                 const detailId = `traffic-mobile-detail-${node.uuid}`;
-                const samples = trafficQuery.data?.samplesByUuid[node.uuid] ?? [];
+                const samples = (effectiveOffset === 0 ? todayQuery.data?.samplesByUuid : pastData?.samplesByUuid)?.[node.uuid] ?? [];
                 return (
                   <div className="panel" key={node.uuid}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                      <Link to={`/server/${encodeURIComponent(node.uuid)}`} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      <Link to={`/server/${encodeURIComponent(node.uuid)}`} className="assets-node-link">
                         <Flag region={node.region} size={12} />
                         <span>{node.name}</span>
                       </Link>

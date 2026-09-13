@@ -508,6 +508,10 @@ export interface ThemeSettings {
   >;
   costRateApiUrl?: string;
   surfaceOpacity?: number;
+  /** 首页卡片网格列数：0 = 自动（按卡片最小宽度自适配），1–6 = 固定列数。 */
+  gridColumns?: number;
+  /** LIST 视图列可见性；缺失的键按可见处理。 */
+  listColumns?: Record<string, boolean>;
 }
 
 /** 图表用的一行历史负载记录，单位与 NodeMetrics 一致。 */

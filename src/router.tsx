@@ -2,14 +2,10 @@ import { createHashRouter, Navigate, useParams } from "react-router-dom";
 import { lazy, Suspense, type ReactNode } from "react";
 import { AppShell } from "@/components/shell/AppShell";
 import { RouteErrorFallback } from "@/components/shell/ErrorBoundary";
-import { loadAssetsPage } from "@/services/assetsPageLoader";
 import { Home } from "@/pages/Home";
 
 const Instance = lazy(() =>
   import("@/pages/Instance").then((m) => ({ default: m.Instance })),
-);
-const Assets = lazy(() =>
-  loadAssetsPage().then((m) => ({ default: m.Assets })),
 );
 const Traffic = lazy(() =>
   import("@/pages/Traffic").then((m) => ({ default: m.Traffic })),
@@ -47,7 +43,6 @@ export const router = createHashRouter([
       { index: true, element: <Home /> },
       { path: "server/:uuid", element: suspended(<Instance />) },
       { path: "instance/:uuid", element: <LegacyInstanceRedirect /> },
-      { path: "assets", element: suspended(<Assets />) },
       { path: "traffic", element: suspended(<Traffic />) },
       { path: "404", element: suspended(<NotFound />) },
       { path: "*", element: <Navigate to="/404" replace /> },

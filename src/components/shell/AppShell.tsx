@@ -25,7 +25,6 @@ export function AppShell() {
   const normalizedPath = (pathname.replace(/\/+$/, "") || "/").toLowerCase();
   const isDataRoute =
     normalizedPath === "/" ||
-    normalizedPath === "/assets" ||
     normalizedPath === "/traffic" ||
     normalizedPath.startsWith("/server/");
   const isCheckingAccess =

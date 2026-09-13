@@ -72,6 +72,10 @@ export interface ResolvedThemeSettings {
   costPremiums: Record<string, CostPremiumEntry>;
   costRateApiUrl: string;
   surfaceOpacity: number;
+  /** 首页卡片网格列数：0 = 自动，1–6 = 固定列数。 */
+  gridColumns: number;
+  /** LIST 视图列可见性（缺失键按可见处理）。 */
+  listColumns: Record<string, boolean>;
 }
 
 export const DEFAULT_THEME_SETTINGS: ResolvedThemeSettings = {
@@ -113,6 +117,8 @@ export const DEFAULT_THEME_SETTINGS: ResolvedThemeSettings = {
   costPremiums: {},
   costRateApiUrl: DEFAULT_COST_RATE_API_URL,
   surfaceOpacity: DEFAULT_SURFACE_OPACITY,
+  gridColumns: 0,
+  listColumns: {},
 };
 
 export function isAppearance(value: unknown): value is Appearance {
@@ -192,6 +198,23 @@ function normalizeHomeSortDefault(
   };
 }
 
+function normalizeGridColumns(value: unknown): number {
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(num)) return 0;
+  const rounded = Math.round(num);
+  if (rounded < 1 || rounded > 6) return 0;
+  return rounded;
+}
+
+function normalizeListColumns(value: unknown): Record<string, boolean> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out: Record<string, boolean> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof raw === "boolean") out[key] = raw;
+  }
+  return out;
+}
+
 export function normalizeThemeSettings(
   settings: (ThemeSettings & Record<string, unknown>) | null | undefined,
 ): ResolvedThemeSettings {
@@ -258,5 +281,9 @@ export function normalizeThemeSettings(
     costRateApiUrl: normalizeCostRateApiUrl(settings?.costRateApiUrl),
     // 默认开:让已配置背景图的存量站点升级后行为不变;关闭 = 保留 URL 但不加载背景图。
     surfaceOpacity: normalizeSurfaceOpacity(settings?.surfaceOpacity),
+    // 网格列数：0=自动，1–6 固定；非法值回落自动。
+    gridColumns: normalizeGridColumns(settings?.gridColumns),
+    // 列表列可见性：只认布尔，缺键/非法值回落可见。
+    listColumns: normalizeListColumns(settings?.listColumns),
   };
 }

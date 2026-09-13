@@ -14,7 +14,6 @@ import { formatHealthBucketTooltip } from "./pingBucketText";
 import { resolveTouchBucketIndex, TOUCH_BUCKET_HOLD_MS } from "./touchBucketPick";
 import { MultiPingStatus } from "./MultiPingStatus";
 import {
-  formatCompactExpire,
   formatCompactPercent,
   formatCompactUptime,
   healthBarSlotModel,
@@ -38,7 +37,6 @@ const TRAFFIC_DOT_COUNT = 16;
 
 type CompactNode = NodeInfo & NodeMetrics;
 type CompactTag = { label: string; color: string };
-type CompactExpire = { value: string; unit: string };
 
 function clamp01(value: number) {
   if (!Number.isFinite(value)) return 0;
@@ -349,24 +347,16 @@ function CompactNodeInfoStrip({
   upRate,
   downRate,
   showTrafficTotal,
-  showBilling,
   showConnections,
-  expire,
-  expireColor,
-  renewalPrice,
 }: {
   node: CompactNode;
   trafficTrend: { up: TrafficTrendSample[]; down: TrafficTrendSample[] };
   upRate: ByteRateDisplay;
   downRate: ByteRateDisplay;
   showTrafficTotal: boolean;
-  showBilling: boolean;
   showConnections: boolean;
-  expire: CompactExpire;
-  expireColor: string;
-  renewalPrice: string | null;
 }) {
-  const infoTileCount = 1 + (showTrafficTotal ? 1 : 0) + (showBilling ? 1 : 0) + (showConnections ? 1 : 0);
+  const infoTileCount = 1 + (showTrafficTotal ? 1 : 0) + (showConnections ? 1 : 0);
 
   return (
     <div className="compact-node-info-strip" style={{ "--compact-info-columns": infoTileCount } as CSSProperties}>
@@ -379,12 +369,6 @@ function CompactNodeInfoStrip({
         <CompactInfoTile label="累计流量" color="var(--fg-dark)">
           <CompactInfoRow icon={<span aria-hidden aria-label="上行">↑</span>} value={formatBytes(node.trafficUp)} />
           <CompactInfoRow icon={<span aria-hidden aria-label="下行">↓</span>} value={formatBytes(node.trafficDown)} />
-        </CompactInfoTile>
-      )}
-      {showBilling && (
-        <CompactInfoTile label="费用到期" color="var(--status-success)">
-          <CompactInfoRow icon={<span aria-hidden>◷</span>} value={formatCompactExpire(expire)} color={expireColor} />
-          <CompactInfoRow icon={<span aria-hidden>¥</span>} value={renewalPrice || "免费"} color={renewalPrice ? "var(--status-success)" : "var(--fg-mid)"} />
         </CompactInfoTile>
       )}
       {showConnections && (
@@ -489,9 +473,6 @@ export const CompactNodeCard = memo(function CompactNodeCard({ uuid }: { uuid: s
     homepagePingLines,
     compactFooterTags: footerTags,
     subtitle,
-    renewalPrice,
-    expire,
-    expireColor,
     upRate,
     downRate,
     isOffline,
@@ -504,7 +485,6 @@ export const CompactNodeCard = memo(function CompactNodeCard({ uuid }: { uuid: s
     osName,
   } = model;
   const showTrafficTotal = themeSettings.isReady && themeSettings.compactShowTrafficTotal;
-  const showBilling = themeSettings.isReady && themeSettings.compactShowBilling;
   const showUptime = themeSettings.isReady && themeSettings.compactShowUptime;
   const showConnections = themeSettings.isReady && themeSettings.showConnections;
   const uptimeLabel = showUptime && !isOffline ? formatCompactUptime(node.uptime) : "";
@@ -520,11 +500,7 @@ export const CompactNodeCard = memo(function CompactNodeCard({ uuid }: { uuid: s
         upRate={upRate}
         downRate={downRate}
         showTrafficTotal={showTrafficTotal}
-        showBilling={showBilling}
         showConnections={showConnections}
-        expire={expire}
-        expireColor={expireColor}
-        renewalPrice={renewalPrice}
       />
       <CompactTrafficBar traffic={traffic} uptimeLabel={uptimeLabel} />
       {homepagePingLines.length > 0 ? (
@@ -540,6 +516,12 @@ export const CompactNodeCard = memo(function CompactNodeCard({ uuid }: { uuid: s
           pingError={pingError}
         />
       )}
+      <Link
+        to={`/server/${encodeURIComponent(uuid)}`}
+        className="card-stretched-link"
+        aria-label={nodeDetailLinkLabels(node.name, osName).ariaLabel}
+        title={nodeDetailLinkLabels(node.name, osName).title}
+      />
     </article>
   );
 });

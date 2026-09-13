@@ -2949,3 +2949,108 @@ body .metric-color-swatch input {
   justify-content: flex-end;
   min-height: 0;
 }
+
+/* ====================================================================
+ * 23. 卡片统一：等高峰行、名称换行、悬停统一、整卡可点
+ * ==================================================================== */
+
+/* 大/小/迷你三档网格行等高，卡片大小统一 */
+.node-grid,
+.node-grid.is-mini,
+.node-grid.is-compact {
+  grid-auto-rows: 1fr;
+}
+.node-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 大卡与迷你卡名称换行（最多两行，超出省略），与 COMPACT 一致 */
+.node-card-name .name {
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mini-node-title {
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* COMPACT / MINI 名称悬停与 LARGE 一致：不反转背景 */
+.compact-node-title:hover,
+.mini-node-title:hover,
+.compact-node-detail-link:hover,
+.mini-node-os:hover {
+  background: transparent;
+  color: var(--fg-dark);
+}
+
+/* 整卡点击打开详情：拉伸链接覆盖整卡，交互元素浮在上层 */
+.compact-node-card,
+.mini-node-card {
+  position: relative;
+}
+.card-stretched-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.compact-node-card .compact-node-title,
+.compact-node-card .compact-node-detail-link,
+.compact-node-card .compact-node-health-bars,
+.compact-node-card .multi-ping-status,
+.mini-node-card .mini-node-title,
+.mini-node-card .mini-node-os,
+.mini-node-card .mini-health-chart-wrap {
+  position: relative;
+  z-index: 2;
+}
+
+/* 分组顺序拖拽列表 */
+.group-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.group-order-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  background: var(--bg-cream);
+  border: var(--border-thin);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-dark);
+  cursor: var(--cur-move);
+  user-select: none;
+}
+.group-order-item:hover { background: var(--bg-cream-dark); }
+.group-order-handle { opacity: 0.6; }
+
+/* LIST 模板由 JS 按可见列拼出（隐藏列不占轨道），覆盖固定 var 模板 */
+.node-list-row {
+  grid-template-columns: var(--node-list-template,
+    var(--lc0, 220px) var(--lc1, 130px) var(--lc2, 100px) var(--lc3, 100px) var(--lc4, 100px)
+    var(--lc5, 90px) var(--lc6, 110px) var(--lc7, 130px) var(--lc8, 100px) minmax(var(--lc9, 120px), 1fr));
+}
+/* 窄屏不再自动隐藏列（可见性由设置控制，隐藏列已不占轨道） */
+@media (max-width: 1180px) {
+  .node-list-row { grid-template-columns: var(--node-list-template); }
+  .col-net { display: flex; }
+}
+@media (max-width: 1000px) {
+  .node-list-row { grid-template-columns: var(--node-list-template); }
+  .col-load { display: flex; }
+}

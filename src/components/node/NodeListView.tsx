@@ -4,6 +4,7 @@ import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
 import { OsLogo } from "@/components/ui/OsLogo";
 import { useNodeCardModel } from "@/hooks/useNodeCardModel";
+import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useMetricColorsVersion } from "@/hooks/useMetricColors";
 import { formatBytes } from "@/utils/format";
@@ -23,18 +24,27 @@ const GAUGE_SEGMENTS = 14;
 const DEFAULT_LIST_COLS = [220, 130, 100, 100, 100, 90, 110, 130, 100, 120];
 const LIST_COLS_STORAGE_KEY = "cfsm-nier:list-cols:v1";
 const MIN_COL_WIDTH = 56;
-const LIST_HEAD_CELLS = [
-  { label: "节点", className: "" },
-  { label: "系统", className: "col-os" },
-  { label: "CPU", className: "col-metric" },
-  { label: "内存", className: "col-metric" },
-  { label: "磁盘", className: "col-metric" },
-  { label: "负载", className: "col-load" },
-  { label: "实时", className: "col-live" },
-  { label: "流量", className: "col-traffic" },
-  { label: "网络", className: "col-net" },
-  { label: "在线 / 到期", className: "col-life" },
-];
+/** 列定义：key 对应主题设置 listColumns，lc 对应列宽变量 --lcN。节点列不可隐藏。 */
+const LIST_COLUMNS = [
+  { key: "os", label: "系统", className: "col-os", lc: 1, def: 130 },
+  { key: "cpu", label: "CPU", className: "col-metric", lc: 2, def: 100 },
+  { key: "mem", label: "内存", className: "col-metric", lc: 3, def: 100 },
+  { key: "disk", label: "磁盘", className: "col-metric", lc: 4, def: 100 },
+  { key: "load", label: "负载", className: "col-load", lc: 5, def: 90 },
+  { key: "live", label: "实时", className: "col-live", lc: 6, def: 110 },
+  { key: "traffic", label: "流量", className: "col-traffic", lc: 7, def: 130 },
+  { key: "net", label: "网络", className: "col-net", lc: 8, def: 100 },
+  { key: "life", label: "在线 / 到期", className: "col-life", lc: 9, def: 120 },
+] as const;
+
+type ListColumn = (typeof LIST_COLUMNS)[number];
+
+export function isListColumnVisible(
+  listColumns: Record<string, boolean>,
+  key: string,
+): boolean {
+  return listColumns[key] !== false;
+}
 
 function readListCols(): number[] {
   try {
@@ -200,7 +210,7 @@ function ListLatency({
   );
 }
 
-const NodeRow = memo(function NodeRow({ uuid }: { uuid: string }) {
+const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hiddenKeys: ReadonlySet<string> }) {
   const { resolvedAppearance } = usePreferences();
   const colorsVersion = useMetricColorsVersion();
   const redrawKey = `${resolvedAppearance}:${colorsVersion}`;
@@ -282,75 +292,112 @@ const NodeRow = memo(function NodeRow({ uuid }: { uuid: string }) {
         </div>
       </div>
 
-      <div className="col-os">
-        <OsLogo value={node.os} size={16} />
-        <span className="node-list-os-name" title={node.os || osName}>
-          {formatOsLabel(osName, node.os)}
-        </span>
-      </div>
-
-      <div className="col-metric">
-        <ListGauge value={pctText(node.cpuPct)} fraction={node.cpuPct / 100} paint="var(--progress-cpu)" redrawKey={redrawKey} />
-      </div>
-      <div className="col-metric">
-        <ListGauge value={pctText(node.ramPct)} fraction={node.ramPct / 100} paint="var(--progress-memory)" redrawKey={redrawKey} />
-      </div>
-      <div className="col-metric">
-        <ListGauge value={pctText(node.diskPct)} fraction={node.diskPct / 100} paint="var(--progress-disk)" redrawKey={redrawKey} />
-      </div>
-
-      <div className="col-load">
-        <ListGauge value={node.load1.toFixed(2)} unit="" fraction={loadFraction} paint="var(--progress-load)" redrawKey={redrawKey} />
-      </div>
-
-      <div className="col-live node-list-stack">
-        <StackLine icon="↑" value={upRate.value} unit={upRate.unit} color={speedRateColor(upRate.unit)} />
-        <StackLine icon="↓" value={downRate.value} unit={downRate.unit} color={speedRateColor(downRate.unit)} />
-      </div>
-
-      <div className="col-traffic" title={`剩余 ${traffic.remainingLabel} · ${traffic.detail}`}>
-        <div className="node-list-traffic-rows">
-          <StackLine icon="↑" value={formatBytes(node.trafficUp)} />
-          <StackLine icon="↓" value={formatBytes(node.trafficDown)} />
+      {!hiddenKeys.has("os") && (
+        <div className="col-os">
+          <OsLogo value={node.os} size={16} />
+          <span className="node-list-os-name" title={node.os || osName}>
+            {formatOsLabel(osName, node.os)}
+          </span>
         </div>
-        <span className="node-list-traffic-quota" style={{ color: traffic.color }}>
-          {usedPct}
-        </span>
-      </div>
+      )}
 
-      <div className="col-net">
-        <ListLatency
-          latency={ping.lastValue}
-          loadState={ping.loadState}
-          hasRealHomepagePingBinding={hasRealHomepagePingBinding}
-          pingIsAssigned={ping.isAssigned}
-          latencyColor={latencyColor}
-          buckets={pingBuckets}
-          redrawKey={redrawKey}
-        />
-      </div>
+      {!hiddenKeys.has("cpu") && (
+        <div className="col-metric">
+          <ListGauge value={pctText(node.cpuPct)} fraction={node.cpuPct / 100} paint="var(--progress-cpu)" redrawKey={redrawKey} />
+        </div>
+      )}
+      {!hiddenKeys.has("mem") && (
+        <div className="col-metric">
+          <ListGauge value={pctText(node.ramPct)} fraction={node.ramPct / 100} paint="var(--progress-memory)" redrawKey={redrawKey} />
+        </div>
+      )}
+      {!hiddenKeys.has("disk") && (
+        <div className="col-metric">
+          <ListGauge value={pctText(node.diskPct)} fraction={node.diskPct / 100} paint="var(--progress-disk)" redrawKey={redrawKey} />
+        </div>
+      )}
 
-      <div className="col-life node-list-stack">
-        <StackLine value={uptime.value} unit={uptime.unit} color="var(--progress-cpu)" />
-        <StackLine value={expire.value} unit={expire.unit} color={expireColor} />
-      </div>
+      {!hiddenKeys.has("load") && (
+        <div className="col-load">
+          <ListGauge value={node.load1.toFixed(2)} unit="" fraction={loadFraction} paint="var(--progress-load)" redrawKey={redrawKey} />
+        </div>
+      )}
+
+      {!hiddenKeys.has("live") && (
+        <div className="col-live node-list-stack">
+          <StackLine icon="↑" value={upRate.value} unit={upRate.unit} color={speedRateColor(upRate.unit)} />
+          <StackLine icon="↓" value={downRate.value} unit={downRate.unit} color={speedRateColor(downRate.unit)} />
+        </div>
+      )}
+
+      {!hiddenKeys.has("traffic") && (
+        <div className="col-traffic" title={`剩余 ${traffic.remainingLabel} · ${traffic.detail}`}>
+          <div className="node-list-traffic-rows">
+            <StackLine icon="↑" value={formatBytes(node.trafficUp)} />
+            <StackLine icon="↓" value={formatBytes(node.trafficDown)} />
+          </div>
+          <span className="node-list-traffic-quota" style={{ color: traffic.color }}>
+            {usedPct}
+          </span>
+        </div>
+      )}
+
+      {!hiddenKeys.has("net") && (
+        <div className="col-net">
+          <ListLatency
+            latency={ping.lastValue}
+            loadState={ping.loadState}
+            hasRealHomepagePingBinding={hasRealHomepagePingBinding}
+            pingIsAssigned={ping.isAssigned}
+            latencyColor={latencyColor}
+            buckets={pingBuckets}
+            redrawKey={redrawKey}
+          />
+        </div>
+      )}
+
+      {!hiddenKeys.has("life") && (
+        <div className="col-life node-list-stack">
+          <StackLine value={uptime.value} unit={uptime.unit} color="var(--progress-cpu)" />
+          <StackLine value={expire.value} unit={expire.unit} color={expireColor} />
+        </div>
+      )}
     </Link>
   );
 });
 
 export function NodeListView({ uuids }: { uuids: string[] }) {
+  const themeSettings = useThemeSettings();
   const [cols, setCols] = useState<number[]>(readListCols);
   const colsRef = useRef(cols);
   colsRef.current = cols;
   const dragRef = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
+
+  const visibleColumns = useMemo<ListColumn[]>(
+    () => LIST_COLUMNS.filter((column) => isListColumnVisible(themeSettings.listColumns, column.key)),
+    [themeSettings.listColumns],
+  );
+  const hiddenKeys = useMemo(() => {
+    const set = new Set<string>();
+    for (const column of LIST_COLUMNS) {
+      if (!isListColumnVisible(themeSettings.listColumns, column.key)) set.add(column.key);
+    }
+    return set;
+  }, [themeSettings.listColumns]);
 
   const colVars = useMemo(() => {
     const vars: Record<string, string> = {};
     cols.forEach((width, index) => {
       vars[`--lc${index}`] = `${width}px`;
     });
+    // 列模板由可见列拼出（节点列始终在），隐藏列不占轨道。
+    const parts = ["var(--lc0, 220px)"];
+    for (const column of visibleColumns) {
+      parts.push(`var(--lc${column.lc}, ${column.def}px)`);
+    }
+    vars["--node-list-template"] = parts.join(" ");
     return vars as CSSProperties;
-  }, [cols]);
+  }, [cols, visibleColumns]);
 
   const onHandlePointerDown = (index: number) => (event: ReactPointerEvent<HTMLSpanElement>) => {
     event.preventDefault();
@@ -380,26 +427,25 @@ export function NodeListView({ uuids }: { uuids: string[] }) {
     <div className="node-list-scroll">
       <div className="node-list" style={colVars}>
         <div className="node-list-row node-list-head" aria-hidden>
-          {LIST_HEAD_CELLS.map((cell, index) => (
-            <div key={cell.label} className={`node-list-cell node-list-head-cell${cell.className ? ` ${cell.className}` : ""}`}>
-              {cell.label}
-              {index < LIST_HEAD_CELLS.length - 1 && (
-                <span
-                  className="node-list-resize-handle"
-                  role="separator"
-                  aria-orientation="vertical"
-                  title={`拖拽调整「${cell.label}」列宽`}
-                  onPointerDown={onHandlePointerDown(index)}
-                  onPointerMove={onHandlePointerMove}
-                  onPointerUp={onHandlePointerUp}
-                  onPointerCancel={onHandlePointerUp}
-                />
-              )}
+          <div className="node-list-cell node-list-head-cell">节点</div>
+          {visibleColumns.map((column) => (
+            <div key={column.key} className={`node-list-cell node-list-head-cell ${column.className}`}>
+              {column.label}
+              <span
+                className="node-list-resize-handle"
+                role="separator"
+                aria-orientation="vertical"
+                title={`拖拽调整「${column.label}」列宽`}
+                onPointerDown={onHandlePointerDown(column.lc)}
+                onPointerMove={onHandlePointerMove}
+                onPointerUp={onHandlePointerUp}
+                onPointerCancel={onHandlePointerUp}
+              />
             </div>
           ))}
         </div>
         {uuids.map((uuid) => (
-          <NodeRow key={uuid} uuid={uuid} />
+          <NodeRow key={uuid} uuid={uuid} hiddenKeys={hiddenKeys} />
         ))}
       </div>
     </div>

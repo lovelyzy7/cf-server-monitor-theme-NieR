@@ -39,27 +39,11 @@ function MiniHeader({ node, osName }: { node: MiniNode; osName: string }) {
   );
 }
 
-function MiniChips({
-  tags,
-  renewalPrice,
-  ipv4,
-  ipv6,
-}: {
-  tags: MiniTag[];
-  renewalPrice: string | null;
-  ipv4?: string | null;
-  ipv6?: string | null;
-}) {
-  if (!renewalPrice && tags.length === 0 && !ipv4 && !ipv6) return null;
+function MiniChips({ tags, ipv4, ipv6 }: { tags: MiniTag[]; ipv4?: string | null; ipv6?: string | null }) {
+  if (tags.length === 0 && !ipv4 && !ipv6) return null;
   const tagTitle = joinTagTitle(tags);
   return (
     <div className="mini-node-chip-row">
-      {renewalPrice && (
-        <span className="mini-node-price-tag" title={`续费价格 ${renewalPrice}`}>
-          <span aria-hidden>¥</span>
-          {renewalPrice}
-        </span>
-      )}
       <IpStackBadges ipv4={ipv4} ipv6={ipv6} />
       {tags.length > 0 && (
         <div className="mini-node-tag-lane" title={tagTitle}>
@@ -313,7 +297,6 @@ export const MiniNodeCard = memo(function MiniNodeCard({ uuid }: { uuid: string 
     ping,
     pingBuckets,
     footerTags,
-    renewalPrice,
     latencyColor,
     lossColor,
     loadFraction,
@@ -329,7 +312,7 @@ export const MiniNodeCard = memo(function MiniNodeCard({ uuid }: { uuid: string 
   return (
     <article className={clsx("mini-node-card", isOffline && "is-offline")}>
       <MiniHeader node={node} osName={osName} />
-      <MiniChips tags={footerTags} renewalPrice={renewalPrice} ipv4={node.ipv4} ipv6={node.ipv6} />
+      <MiniChips tags={footerTags} ipv4={node.ipv4} ipv6={node.ipv6} />
       <MiniVitals node={node} loadFraction={loadFraction} />
       <MiniFlow node={node} upRate={upRate} downRate={downRate} />
       <MiniHealth
@@ -340,6 +323,12 @@ export const MiniNodeCard = memo(function MiniNodeCard({ uuid }: { uuid: string 
         hasRealHomepagePingBinding={hasRealHomepagePingBinding}
         pingLoading={pingLoading}
         pingError={pingError}
+      />
+      <Link
+        to={`/server/${encodeURIComponent(uuid)}`}
+        className="card-stretched-link"
+        aria-label={nodeDetailLinkLabels(node.name, osName).ariaLabel}
+        title={nodeDetailLinkLabels(node.name, osName).title}
       />
     </article>
   );

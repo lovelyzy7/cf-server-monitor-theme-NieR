@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
@@ -31,9 +30,7 @@ import { useHomeSort } from "@/hooks/useHomeSort";
 import { useHomeNodeOrder } from "@/hooks/useHomeNodeOrder";
 import { useHourlyClock } from "@/hooks/useClock";
 import { usePacedRate } from "@/hooks/usePacedRate";
-import { preloadAssetsPage } from "@/services/assetsPageLoader";
 import { HomeSortControl } from "./HomeSortControl";
-import { getOverviewRating, type OverviewRating } from "@/utils/overviewRating";
 import { CompactNodeCard } from "./CompactNodeCard";
 import { MiniNodeCard } from "./MiniNodeCard";
 import { NodeCardUuid } from "./NodeCard";
@@ -50,10 +47,6 @@ const GRID_MIN_WIDTH: Record<NodeViewMode, number> = {
 const UUID_KEY_SEPARATOR = ",";
 const EMPTY_RATES: Record<string, number> = {};
 
-type IdleCapableWindow = Window & {
-  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-  cancelIdleCallback?: (handle: number) => void;
-};
 
 interface HomeOverview {
   totalNodes: number;
@@ -82,20 +75,10 @@ function HomeBrand({ siteName }: { siteName: string }) {
 
 function HomeOverviewCards({
   overview,
-  showOverviewRatings,
-  showTrafficRating,
-  showBandwidthRating,
-  trafficRatingLabels,
-  bandwidthRatingLabels,
   dense,
 }: {
   overview: HomeOverview;
   dense: boolean;
-  showOverviewRatings: boolean;
-  showTrafficRating: boolean;
-  showBandwidthRating: boolean;
-  trafficRatingLabels: string;
-  bandwidthRatingLabels: string;
 }) {
   const [trafficValue, trafficUnit] = formatBytes(overview.trafficUp + overview.trafficDown).split(" ");
   const rate = formatByteRate(overview.netUp + overview.netDown);
@@ -105,21 +88,6 @@ function HomeOverviewCards({
   const trafficCompactLabel = `↑${formatCompactBytes(overview.trafficUp)} ↓${formatCompactBytes(overview.trafficDown)}`;
   const bandwidthDetailLabel = `↑ ${formatByteRateLabel(overview.netUp)} · ↓ ${formatByteRateLabel(overview.netDown)}`;
   const bandwidthCompactLabel = `↑${formatCompactBytes(overview.netUp)} ↓${formatCompactBytes(overview.netDown)}`;
-  const trafficRating =
-    showOverviewRatings && showTrafficRating
-      ? getOverviewRating({ kind: "traffic", value: overview.trafficUp + overview.trafficDown, customLabels: trafficRatingLabels })
-      : null;
-  const bandwidthRating =
-    showOverviewRatings && showBandwidthRating
-      ? getOverviewRating({ kind: "bandwidth", value: overview.netUp + overview.netDown, customLabels: bandwidthRatingLabels })
-      : null;
-
-  const renderRating = (rating: OverviewRating | null) =>
-    rating ? (
-      <span className="overview-card-rating" data-rating-level={rating.level} title={rating.label}>
-        {rating.label}
-      </span>
-    ) : null;
 
   return (
     <section className={`home-overview${dense ? " is-dense" : ""}`} aria-label="首页总览">
@@ -164,7 +132,6 @@ function HomeOverviewCards({
             <span className="overview-card-sub-full">{bandwidthDetailLabel}</span>
             <span className="overview-card-sub-compact">{bandwidthCompactLabel}</span>
           </p>
-          {renderRating(bandwidthRating)}
         </div>
       </article>
 
@@ -183,7 +150,6 @@ function HomeOverviewCards({
             <span className="overview-card-sub-full">{trafficDetailLabel}</span>
             <span className="overview-card-sub-compact">{trafficCompactLabel}</span>
           </p>
-          {renderRating(trafficRating)}
         </div>
       </article>
     </section>
@@ -296,26 +262,11 @@ export function NodeGrid() {
   );
   const showHomeOverview = themeSettings.isReady && themeSettings.showHomeOverview;
   const hasNodes = visibleMeta.length > 0;
-  const showCostFloatingButton =
-    themeSettings.isReady && themeSettings.showCostSummaryFloatingButton && hasNodes;
-
-  useEffect(() => {
-    if (!showCostFloatingButton) return;
-    const idleWindow = window as IdleCapableWindow;
-    if (idleWindow.requestIdleCallback) {
-      const handle = idleWindow.requestIdleCallback(preloadAssetsPage, { timeout: 2_000 });
-      return () => idleWindow.cancelIdleCallback?.(handle);
-    }
-    const handle = window.setTimeout(preloadAssetsPage, 1_000);
-    return () => window.clearTimeout(handle);
-  }, [showCostFloatingButton]);
-
-  const costNeeded = showCostFloatingButton;
   const rateQuery = useQuery({
     queryKey: ["cost-rates", themeSettings.costRateApiUrl],
     queryFn: ({ signal }) => getExchangeRates(themeSettings.costRateApiUrl, { signal }),
     staleTime: 60 * 60 * 1000,
-    enabled: (costNeeded || sortField === "price") && hasNodes,
+    enabled: sortField === "price" && hasNodes,
     retry: 1,
   });
   const ratesFetching = rateQuery.fetchStatus === "fetching" && !rateQuery.data;
@@ -400,9 +351,13 @@ export function NodeGrid() {
   const isMini = mode === "mini";
   const isList = mode === "list";
   const minColumnWidth = GRID_MIN_WIDTH[mode];
+  // 「几乘几」布局设置：gridColumns > 0 时用固定列数，0 用自动最小列宽自适配。
+  const fixedColumns = themeSettings.isReady ? themeSettings.gridColumns : 0;
   const gridStyle = isList
     ? undefined
-    : ({ gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minColumnWidth}px), 1fr))` } as CSSProperties);
+    : fixedColumns > 0
+      ? ({ gridTemplateColumns: `repeat(${fixedColumns}, minmax(0, 1fr))` } as CSSProperties)
+      : ({ gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minColumnWidth}px), 1fr))` } as CSSProperties);
   const gridElement = (
     <div className={clsx("node-grid", isMini && "is-mini", isList && "is-list")} style={gridStyle}>
       {cards}
@@ -421,21 +376,11 @@ export function NodeGrid() {
 
   const homeHeader = (
     <>
-      {showCostFloatingButton && (
-        <Link to="/assets" className="cost-summary-ball" aria-label="打开资产统计页" title="资产统计">
-          <span aria-hidden>¥</span>
-        </Link>
-      )}
       <HomeBrand siteName={siteName} />
       {showHomeOverview && (
         <HomeOverviewCards
           overview={displayOverview}
           dense={mode === "mini" || mode === "list"}
-          showOverviewRatings={themeSettings.showOverviewRatings}
-          showTrafficRating={themeSettings.showTrafficRating}
-          showBandwidthRating={themeSettings.showBandwidthRating}
-          trafficRatingLabels={themeSettings.trafficRatingLabels}
-          bandwidthRatingLabels={themeSettings.bandwidthRatingLabels}
         />
       )}
     </>
