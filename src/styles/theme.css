@@ -3456,3 +3456,32 @@ body .metric-color-swatch input {
     display: none !important;
   }
 }
+
+/* ====================================================================
+ * 31. 流量页移动端：汇总卡无滚动条、不闪动
+ * ==================================================================== */
+@media (max-width: 720px) {
+  .traffic-summary-card {
+    overflow: visible !important;
+    scrollbar-width: none !important;
+    min-width: 0;
+    word-break: break-word;
+  }
+  .traffic-summary-card *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  .traffic-summary-directions {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .traffic-summary-total {
+    font-size: 24px;
+    word-break: break-word;
+  }
+  .traffic-summary-peak-main {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}

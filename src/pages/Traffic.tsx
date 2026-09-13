@@ -1,6 +1,6 @@
 import { Fragment, Suspense, lazy, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { Flag } from "@/components/ui/Flag";
 import { Spinner } from "@/components/ui/Spinner";
 import { useMinuteClock } from "@/hooks/useClock";
@@ -8,6 +8,7 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTodayTrafficStats } from "@/hooks/useTodayTrafficStats";
 import { useVisibleNodes } from "@/hooks/useVisibleNodes";
 import { useHomeNodeSummaries } from "@/hooks/useNode";
+import { usePacedRate } from "@/hooks/usePacedRate";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { getLoadRecords } from "@/services/api";
@@ -195,6 +196,34 @@ function PeakSummaryRow({ direction, detail }: { direction: "up" | "down"; detai
   );
 }
 
+function TrafficSamplePanel({
+  uuid,
+  dayStartMs,
+  dayEndMs,
+  hours,
+  live,
+}: {
+  uuid: string;
+  dayStartMs: number;
+  dayEndMs: number;
+  hours: number;
+  live: { up: number; down: number } | null;
+}) {
+  const samplesQuery = useQuery({
+    queryKey: ["traffic-day-samples", uuid, dayStartMs],
+    queryFn: ({ signal }: { signal: AbortSignal }) =>
+      getLoadRecords(uuid, hours, { signal, cache: false }).then((data) =>
+        buildTodayTrafficRecordSamples(data.records, dayStartMs, dayEndMs),
+      ),
+    staleTime: 60_000,
+    retry: 1,
+  });
+  if (samplesQuery.isPending) {
+    return <div style={{ padding: "20px 0", textAlign: "center" }}><Spinner size={18} /></div>;
+  }
+  return <TrafficSampleChart id={`traffic-detail-${uuid}`} samples={samplesQuery.data ?? []} live={live} />;
+}
+
 function TrafficDetailToggle({ expanded, onClick }: { expanded: boolean; controlsId: string; onClick: () => void }) {
   return (
     <button type="button" aria-expanded={expanded} onClick={onClick}>
@@ -266,7 +295,8 @@ export function Traffic() {
   const dayStartMs = todayStartMs - effectiveOffset * DAY_MS;
   const dayEndMs = dayStartMs + DAY_MS;
 
-  const todayQuery = useTodayTrafficStats(uuids, now);
+  // 初始只取汇总（summary 模式跳过样本构建），展开某台节点时再按需拉明细。
+  const todayQuery = useTodayTrafficStats(uuids, now, "summary");
   // 往期：逐节点拉对应档位历史，按当天窗口积分（与今日同一套口径）。
   const hours = hoursTierForRange(dayStartMs, dayEndMs);
   const pastQueries = useQueries({
@@ -281,13 +311,11 @@ export function Traffic() {
   const pastData = useMemo(() => {
     if (effectiveOffset === 0) return null;
     const rows: TodayTrafficStat[] = [];
-    const samplesByUuid: Record<string, TodayTrafficSample[]> = {};
     uuids.forEach((uuid, index) => {
       const records = pastQueries[index]?.data?.records ?? [];
       rows.push(summarizeTodayTrafficRecords(uuid, records, dayStartMs, dayEndMs));
-      samplesByUuid[uuid] = buildTodayTrafficRecordSamples(records, dayStartMs, dayEndMs);
     });
-    return { rows, samplesByUuid, rangeStartMs: dayStartMs, rangeEndMs: dayEndMs };
+    return { rows, rangeStartMs: dayStartMs, rangeEndMs: dayEndMs };
   }, [dayEndMs, dayStartMs, effectiveOffset, pastQueries, uuids]);
 
   const data = effectiveOffset === 0 ? todayQuery.data : pastData;
@@ -341,6 +369,8 @@ export function Traffic() {
     }
     return { liveTotalUp: up, liveTotalDown: down };
   }, [liveByUuid]);
+  // 跨节点求和每秒会变好几次，按 1 秒节拍统一换一次（与首页实时带宽同口径）。
+  const pacedLive = usePacedRate(liveTotalUp, liveTotalDown);
 
   const handleSort = (field: TrafficSortField) => {
     if (field === sortField) setSortDirection((value) => (value === "asc" ? "desc" : "asc"));
@@ -405,8 +435,8 @@ export function Traffic() {
                 <span>↓ {formatBytes(totalDown)}</span>
               </div>
               <div className="traffic-summary-directions" style={{ marginTop: 6, borderTop: "1px solid rgba(216,209,187,0.15)", paddingTop: 6 }}>
-                <span style={{ color: speedRateColor("MB/s") }}>实时 ↑ {formatByteRateLabel(liveTotalUp)}</span>
-                <span style={{ color: speedRateColor("MB/s") }}>↓ {formatByteRateLabel(liveTotalDown)}</span>
+                <span style={{ color: speedRateColor("MB/s") }}>实时 ↑ {formatByteRateLabel(pacedLive.up)}</span>
+                <span style={{ color: speedRateColor("MB/s") }}>↓ {formatByteRateLabel(pacedLive.down)}</span>
               </div>
             </div>
 
@@ -448,7 +478,6 @@ export function Traffic() {
                   {details.map(({ node, stat, total }) => {
                     const expanded = expandedUuid === node.uuid;
                     const detailId = `traffic-detail-${node.uuid}`;
-                    const samples = (effectiveOffset === 0 ? todayQuery.data?.samplesByUuid : pastData?.samplesByUuid)?.[node.uuid] ?? [];
                     return (
                       <Fragment key={node.uuid}>
                         <tr>
@@ -482,7 +511,7 @@ export function Traffic() {
                         </tr>
                         {expanded && (
                           <tr>
-                            <td colSpan={6}><TrafficSampleChart id={detailId} samples={samples} live={liveByUuid.get(node.uuid) ?? null} /></td>
+                            <td colSpan={6}><TrafficSamplePanel uuid={node.uuid} dayStartMs={dayStartMs} dayEndMs={dayEndMs} hours={hours} live={liveByUuid.get(node.uuid) ?? null} /></td>
                           </tr>
                         )}
                       </Fragment>
@@ -496,7 +525,6 @@ export function Traffic() {
               {details.map(({ node, stat, total }) => {
                 const expanded = expandedUuid === node.uuid;
                 const detailId = `traffic-mobile-detail-${node.uuid}`;
-                const samples = (effectiveOffset === 0 ? todayQuery.data?.samplesByUuid : pastData?.samplesByUuid)?.[node.uuid] ?? [];
                 return (
                   <div className="panel" key={node.uuid}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -527,7 +555,7 @@ export function Traffic() {
                         </dl>
                       </>
                     )}
-                    {expanded && <TrafficSampleChart id={detailId} samples={samples} live={liveByUuid.get(node.uuid) ?? null} />}
+                    {expanded && <TrafficSamplePanel uuid={node.uuid} dayStartMs={dayStartMs} dayEndMs={dayEndMs} hours={hours} live={liveByUuid.get(node.uuid) ?? null} />}
                   </div>
                 );
               })}

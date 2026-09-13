@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import { BackgroundLayer } from "./BackgroundLayer";
 import { TerminalBar } from "./TerminalBar";
 import { TurnstileGate } from "./TurnstileGate";
@@ -23,6 +24,10 @@ export function AppShell() {
   const auth = useAuth();
   const pingRefresh = usePingHistoryRefresh();
   const normalizedPath = (pathname.replace(/\/+$/, "") || "/").toLowerCase();
+  // 切换页面回到顶部（hash 路由不会自动滚动）。
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [normalizedPath, search]);
   const isDataRoute =
     normalizedPath === "/" ||
     normalizedPath === "/traffic" ||
