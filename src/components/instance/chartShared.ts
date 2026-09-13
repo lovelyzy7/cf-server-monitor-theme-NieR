@@ -80,6 +80,7 @@ const TIME_RANGE_OPTIONS: TimeRangeOption[] = [
   { label: "1 天", value: 24 },
   { label: "2 天", value: 48 },
   { label: "7 天", value: 168 },
+  { label: "14 天", value: 336 },
 ];
 
 const PING_TIME_RANGE_OPTIONS: TimeRangeOption[] = [...TIME_RANGE_OPTIONS];

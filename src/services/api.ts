@@ -38,7 +38,7 @@ import { resolvePreferredAppearance } from "@/utils/themeSettings";
 export { ApiRequestError, DatabaseUpgradeRequiredError } from "@/services/cfsm/http";
 
 /** 后端支持的历史查询时长档位（小时）。 */
-export const HISTORY_HOURS_OPTIONS = [0.167, 0.5, 1, 6, 12, 24, 48, 96, 168] as const;
+export const HISTORY_HOURS_OPTIONS = [0.167, 0.5, 1, 6, 12, 24, 48, 96, 168, 336] as const;
 
 /** 未登录用户查询超过 24 小时会被拒绝。 */
 export const ANONYMOUS_MAX_HISTORY_HOURS = 24;

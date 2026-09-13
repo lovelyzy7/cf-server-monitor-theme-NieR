@@ -3,7 +3,7 @@ const TRAFFIC_STATS_REFRESH_MS = 5 * 60 * 1000;
 const TRAFFIC_STATS_ERROR_RETRY_MS = 60 * 1000;
 
 /** `/api/history/all` 支持的时长档位。 */
-const HISTORY_HOURS_STEPS = [1, 6, 12, 24, 48] as const;
+const HISTORY_HOURS_STEPS = [1, 6, 12, 24, 48, 96, 168, 336] as const;
 
 export function selectActiveTodayTrafficUuids(
   uuids: string[],

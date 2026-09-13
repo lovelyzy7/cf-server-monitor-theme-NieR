@@ -12,7 +12,7 @@ import { useHomeNodeSummaries } from "@/hooks/useNode";
 import { usePacedRate } from "@/hooks/usePacedRate";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
-import { getLoadRecords } from "@/services/api";
+import { clearHistoryCache, getLoadRecords } from "@/services/api";
 import { formatByteRateLabel, formatBytes } from "@/utils/format";
 import { speedRateColor } from "@/utils/metricTone";
 import {
@@ -63,8 +63,8 @@ function localDayStart(now: number): number {
 /** 后端支持的时长档位；给区间前后各留 1 小时采样基准。 */
 function hoursTierForRange(startMs: number, endMs: number): number {
   const elapsedHours = Math.max(1, Math.ceil((endMs - startMs) / 3_600_000) + 1);
-  const tiers = [24, 48, 96, 168];
-  return tiers.find((hours) => hours >= elapsedHours) ?? 168;
+  const tiers = [24, 48, 96, 168, 336];
+  return tiers.find((hours) => hours >= elapsedHours) ?? 336;
 }
 
 function sortDetailValue(detail: TrafficDetail, field: TrafficSortField): number | string {
@@ -204,13 +204,14 @@ const NODE_CHART_RANGES = [
   { label: "1 天", hours: 24 },
   { label: "3 天", hours: 72 },
   { label: "7 天", hours: 168 },
+  { label: "14 天", hours: 336 },
 ] as const;
 
-const NODE_CHART_HOURS_TIERS = [1, 6, 12, 24, 48, 96, 168];
+const NODE_CHART_HOURS_TIERS = [1, 6, 12, 24, 48, 96, 168, 336];
 
 function tierForSpan(spanMs: number): number {
   const elapsed = Math.max(1, Math.ceil(spanMs / 3_600_000));
-  return NODE_CHART_HOURS_TIERS.find((hours) => hours >= elapsed) ?? 168;
+  return NODE_CHART_HOURS_TIERS.find((hours) => hours >= elapsed) ?? 336;
 }
 
 /**
@@ -226,12 +227,12 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
   const customStartMs = customDate ? new Date(`${customDate}T00:00:00`).getTime() : null;
   const startMs = customStartMs ?? nowMs - rangeHours * 3_600_000;
   const hours = tierForSpan(nowMs - startMs);
-  const retentionMs = 7 * DAY_MS;
+  const retentionMs = 14 * DAY_MS;
   const allowed = hours <= 24 || me?.logged_in === true;
   const samplesQuery = useQuery({
     queryKey: ["traffic-node-chart", uuid, startMs],
     queryFn: ({ signal }: { signal: AbortSignal }) =>
-      getLoadRecords(uuid, hours, { signal, cache: false }).then((data) =>
+      getLoadRecords(uuid, hours, { signal }).then((data) =>
         buildTodayTrafficRecordSamples(data.records, startMs, nowMs),
       ),
     staleTime: 60_000,
@@ -276,7 +277,7 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
           max={toDateInputValue(nowMs)}
           onChange={(e) => setCustomDate(e.target.value || null)}
         />
-        {beyondRetention && <em>仅保留最近 7 天，图中为保留期内的数据</em>}
+        {beyondRetention && <em>仅保留最近 14 天，图中为保留期内的数据</em>}
       </label>
       {!allowed ? (
         <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>
@@ -329,7 +330,7 @@ export function Traffic() {
     return map;
   }, [summaries]);
   // 未登录访客查不了超过 24 小时的历史，往期只给登录用户。
-  const maxDayOffset = me?.logged_in ? 6 : 0;
+  const maxDayOffset = me?.logged_in ? 13 : 0;
   const todayStartMs = localDayStart(now);
   // 往期记录通过日历选择：解析选中日期，越界（未来/超出上限）时收敛到允许范围。
   const selectedStartMs = selectedDate ? new Date(`${selectedDate}T00:00:00`).getTime() : todayStartMs;
@@ -348,7 +349,7 @@ export function Traffic() {
   const pastQueries = useQueries({
     queries: uuids.map((uuid) => ({
       queryKey: ["traffic-day", uuid, dayStartMs],
-      queryFn: ({ signal }: { signal: AbortSignal }) => getLoadRecords(uuid, hours, { signal, cache: false }),
+      queryFn: ({ signal }: { signal: AbortSignal }) => getLoadRecords(uuid, hours, { signal }),
       enabled: effectiveOffset > 0,
       staleTime: 5 * 60 * 1000,
       retry: 1,
@@ -369,6 +370,7 @@ export function Traffic() {
   const isError = effectiveOffset === 0 ? todayQuery.isError : pastQueries.some((query) => query.isError);
   const isFetching = effectiveOffset === 0 ? todayQuery.isFetching : pastQueries.some((query) => query.isFetching);
   const refetch = () => {
+    clearHistoryCache();
     if (effectiveOffset === 0) void todayQuery.refetch();
     else for (const query of pastQueries) void query.refetch();
   };

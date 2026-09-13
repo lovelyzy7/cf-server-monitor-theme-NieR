@@ -20,7 +20,7 @@ import { formatBytes, formatByteRateLabel, formatUptimeDays } from "@/utils/form
 import { clsx } from "clsx";
 
 const DEFAULT_PING_HOURS = 1;
-const MAX_HISTORY_HOURS = 168;
+const MAX_HISTORY_HOURS = 336;
 type TimeRangeOption = ReturnType<typeof buildLoadTimeRangeOptions>[number];
 
 function RangeSelector({ ranges, value, onChange }: { ranges: TimeRangeOption[]; value: number; onChange: (value: number) => void }) {

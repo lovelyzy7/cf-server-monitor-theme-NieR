@@ -126,7 +126,7 @@ describe("normalizeHistoryHours", () => {
   it("snaps arbitrary durations to a supported step", () => {
     expect(normalizeHistoryHours(4)).toBe(6);
     expect(normalizeHistoryHours(0.2)).toBe(0.167);
-    expect(normalizeHistoryHours(1000)).toBe(168);
+    expect(normalizeHistoryHours(1000)).toBe(336);
     expect(normalizeHistoryHours(Number.NaN)).toBe(24);
   });
 });
