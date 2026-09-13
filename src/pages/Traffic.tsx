@@ -223,32 +223,52 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
   const { data: me } = useAuth();
   const [rangeHours, setRangeHours] = useState<number>(24);
   const [customDate, setCustomDate] = useState<string | null>(null);
-  const nowMs = Date.now();
+  // 窗口锚点只在用户换范围/日期/手动刷新时更新：查询键稳定，图表不因页面每秒重渲而重建。
+  const [anchorMs, setAnchorMs] = useState(() => Date.now());
   const customStartMs = customDate ? new Date(`${customDate}T00:00:00`).getTime() : null;
-  const startMs = customStartMs ?? nowMs - rangeHours * 3_600_000;
-  const hours = tierForSpan(nowMs - startMs);
+  const startMs = customStartMs ?? anchorMs - rangeHours * 3_600_000;
+  const hours = tierForSpan(anchorMs - startMs);
   const retentionMs = 14 * DAY_MS;
   const allowed = hours <= 24 || me?.logged_in === true;
   const samplesQuery = useQuery({
     queryKey: ["traffic-node-chart", uuid, startMs],
     queryFn: ({ signal }: { signal: AbortSignal }) =>
       getLoadRecords(uuid, hours, { signal }).then((data) =>
-        buildTodayTrafficRecordSamples(data.records, startMs, nowMs),
+        buildTodayTrafficRecordSamples(data.records, startMs, anchorMs),
       ),
     staleTime: 60_000,
     retry: 1,
     enabled: allowed,
   });
+  const selectRange = (nextHours: number) => {
+    setRangeHours(nextHours);
+    setCustomDate(null);
+    setAnchorMs(Date.now());
+  };
+  const selectDate = (value: string) => {
+    setCustomDate(value || null);
+    setAnchorMs(Date.now());
+  };
+  const refreshChart = () => {
+    clearHistoryCache();
+    setAnchorMs(Date.now());
+    void samplesQuery.refetch();
+  };
   const samples = samplesQuery.data ?? [];
   const hasSamples = samples.length > 0;
-  const beyondRetention = customStartMs != null && nowMs - customStartMs > retentionMs;
+  const beyondRetention = customStartMs != null && anchorMs - customStartMs > retentionMs;
 
   return (
     <section className="panel" aria-label="节点当日流量与网速" style={{ marginTop: 8 }}>
       <header style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
         <strong style={{ letterSpacing: "0.12em", textTransform: "uppercase", fontSize: 13 }}>节点流量与网速</strong>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>
-          {hasSamples ? `${samples.length} 个采样 · 左轴累计按采样积分估算` : "等待采样数据"}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>
+            {hasSamples ? `${samples.length} 个采样 · 左轴累计按采样积分估算` : "等待采样数据"}
+          </span>
+          <button type="button" className="cost-summary-action" onClick={refreshChart} disabled={samplesQuery.isFetching} aria-busy={samplesQuery.isFetching} title="重新拉取该时间范围">
+            ⟳ 刷新
+          </button>
         </span>
       </header>
       <div className="tab-bar node-chart-ranges" role="group" aria-label="时间范围">
@@ -258,10 +278,7 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
             type="button"
             className={clsx("tab-btn", customDate == null && rangeHours === range.hours && "active")}
             aria-pressed={customDate == null && rangeHours === range.hours}
-            onClick={() => {
-              setRangeHours(range.hours);
-              setCustomDate(null);
-            }}
+            onClick={() => selectRange(range.hours)}
           >
             {range.label}
           </button>
@@ -272,10 +289,10 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
         <input
           type="date"
           className="nie-date-input"
-          value={customDate ?? toDateInputValue(nowMs)}
-          min={toDateInputValue(nowMs - retentionMs)}
-          max={toDateInputValue(nowMs)}
-          onChange={(e) => setCustomDate(e.target.value || null)}
+          value={customDate ?? toDateInputValue(anchorMs)}
+          min={toDateInputValue(anchorMs - retentionMs)}
+          max={toDateInputValue(anchorMs)}
+          onChange={(e) => selectDate(e.target.value)}
         />
         {beyondRetention && <em>仅保留最近 14 天，图中为保留期内的数据</em>}
       </label>
