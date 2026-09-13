@@ -129,9 +129,12 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
   const refreshTitle = buildRefreshTitle(pingRefresh);
   const refreshActive = pingRefresh.status === "loading";
 
-  const navLink = (to: string, label: string) => {
+  const isThemeManageView =
+    location.pathname === "/" && location.search.includes("theme-manage");
+
+  const navLink = (to: string, label: string, isActive?: () => boolean) => {
     const path = to.split("?")[0] ?? to;
-    const active = location.pathname === path;
+    const active = isActive ? isActive() : location.pathname === path;
     return (
       <Link key={to} to={to} className={active ? "active" : undefined}>
         {label}
@@ -214,11 +217,11 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
         </div>
       </div>
       <nav className="primary">
-        {navLink("/", t("nav.status"))}
+        {navLink("/", t("nav.status"), () => location.pathname === "/" && !isThemeManageView)}
         {navLink("/traffic", t("nav.traffic"))}
       </nav>
       <nav className="mobile-nav" aria-label="移动端导航">
-        <Link to="/" className={location.pathname === "/" ? "active" : undefined}>
+        <Link to="/" className={location.pathname === "/" && !isThemeManageView ? "active" : undefined}>
           <span aria-hidden>▣</span>
           <span>{t("nav.status")}</span>
         </Link>
@@ -226,7 +229,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           <span aria-hidden>≋</span>
           <span>{t("nav.traffic")}</span>
         </Link>
-        <Link to="/?view=theme-manage" className={location.pathname === "/" && location.search.includes("theme-manage") ? "active" : undefined}>
+        <Link to="/?view=theme-manage" className={isThemeManageView ? "active" : undefined}>
           <span aria-hidden>▤</span>
           <span>{t("nav.settings")}</span>
         </Link>

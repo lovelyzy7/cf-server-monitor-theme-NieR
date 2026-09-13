@@ -3347,3 +3347,43 @@ body .metric-color-swatch input {
     bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* ====================================================================
+ * 28. 移动端设置页：内容随屏同步缩放、面板内不出现滚动条
+ * ==================================================================== */
+@media (max-width: 720px) {
+  /* 设置页面板禁止横向滚动条（覆盖 automata 的 .panel overflow-x:auto） */
+  .theme-manage .panel {
+    overflow-x: hidden;
+    padding: 12px 14px;
+  }
+  /* 设置页页签改为换行，不出现横向滚动 */
+  .theme-manage .tab-bar {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    gap: 4px;
+  }
+  .theme-manage .tab-bar .tab-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+    flex: 1 1 auto;
+    text-align: center;
+  }
+  /* 标题与说明随屏缩放 */
+  .theme-manage .bracket-header {
+    font-size: 13px;
+    letter-spacing: 0.16em;
+  }
+  .theme-manage .panel .kv {
+    grid-template-columns: 1fr;
+  }
+  .theme-manage input[type="text"],
+  .theme-manage textarea {
+    font-size: 12px;
+    max-width: 100%;
+  }
+  /* 视图模式网格在手机上单列 */
+  .theme-manage .panel .tab-bar + .tab-bar {
+    margin-top: 4px;
+  }
+}
