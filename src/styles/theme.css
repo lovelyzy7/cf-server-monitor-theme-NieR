@@ -2860,3 +2860,47 @@ a:focus-visible {
       minmax(var(--lc9, 120px), 1fr);
   }
 }
+
+/* ====================================================================
+ * 21. 表格首行竖线 + 鼠标状态映射补全
+ * ==================================================================== */
+
+/* 列表表头：每列之间加竖线分隔（不占布局，不干扰列宽拖拽手柄） */
+.node-list-row.node-list-head .node-list-head-cell:not(:last-child) {
+  box-shadow: inset -1px 0 0 rgba(26, 24, 20, 0.28);
+}
+:root[data-appearance="dark"] .node-list-row.node-list-head .node-list-head-cell:not(:last-child) {
+  box-shadow: inset -1px 0 0 rgba(230, 223, 201, 0.22);
+}
+
+/* ---- 光标状态映射补全（设计来自 mouse.jpg 参考图，见 automata.css --cur-*）---- */
+
+/* 加载中 / 忙碌：箭头 + 沙漏（background/working 状态） */
+body [aria-busy="true"],
+body [data-busy="1"],
+body .nie-spinner,
+body .instance-chart-loading,
+body .center-box .nie-spinner {
+  cursor: var(--cur-progress);
+}
+
+/* 等待态（hourglass） */
+body [data-waiting="1"],
+body .cur-wait {
+  cursor: var(--cur-wait);
+}
+
+/* 滑杆（暗色深度 / 卡片不透明度）：水平调整 */
+body input[type="range"] {
+  cursor: var(--cur-ew);
+}
+
+/* 列表列宽拖拽手柄：水平调整（与上一条一致） */
+body .node-list-resize-handle {
+  cursor: var(--cur-ew);
+}
+
+/* 精确选择：表头列宽拖拽以外的画布/柱状图区域用十字 */
+body .metric-color-swatch input {
+  cursor: var(--cur-pointer);
+}
