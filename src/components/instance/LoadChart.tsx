@@ -296,20 +296,18 @@ const ChartCard = memo(function ChartCard({
   const accentColor = accent ?? colors[0];
 
   return (
-    <div style={{ position: "relative" }}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 6, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div className="instance-chart-card">
+      <header className="instance-chart-card-head">
+        <div className="instance-panel-subhead">
           <span aria-hidden style={{ width: 8, height: 8, background: accentColor, flexShrink: 0 }} />
-          <span style={{ fontSize: 13, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: "bold", color: "var(--fg-dark)" }}>
-            {title}
-          </span>
+          <span>{title}</span>
         </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, fontFamily: "var(--font-mono)" }}>
-          <span style={{ fontSize: 13, color: "var(--fg-dark)", fontVariantNumeric: "tabular-nums" }}>{value}</span>
-          {note != null && <span style={{ fontSize: 11, color: "var(--fg-mid)" }}>{note}</span>}
+        <div className="instance-series-stats">
+          <span className="tabular">{value}</span>
+          {note != null && <span className="tabular">{note}</span>}
         </div>
       </header>
-      <div ref={chartSizeRef} style={{ position: "relative" }}>
+      <div ref={chartSizeRef} className="instance-uplot-wrap">
         <UplotReact key={`${uuid}-${rangeHours}`} options={chartOptions} data={data} resetScales={rangeHours === 0} />
         <ChartTooltip tooltip={tooltip} />
       </div>
@@ -437,9 +435,9 @@ export function LoadChart({ uuid, hours, active = true }: { uuid: string; hours:
   if (isError && !points.length) {
     return (
       <InstancePanel title="负载图表">
-        <div style={{ textAlign: "center", padding: "24px 0", color: "var(--fg-mid)" }}>
+        <div className="instance-empty">
           <span>负载历史加载失败</span>{" "}
-          <button type="button" onClick={() => void refetch()} disabled={isFetching} aria-busy={isFetching}>
+          <button type="button" className="instance-toggle-button" onClick={() => void refetch()} disabled={isFetching} aria-busy={isFetching}>
             {isFetching ? "重试中" : "重试"}
           </button>
         </div>
@@ -450,7 +448,7 @@ export function LoadChart({ uuid, hours, active = true }: { uuid: string; hours:
   if (!points.length) {
     return (
       <InstancePanel title="负载图表">
-        <div style={{ textAlign: "center", padding: "24px 0", color: "var(--fg-mid)" }}>暂无负载历史数据</div>
+        <div className="instance-empty">暂无负载历史数据</div>
       </InstancePanel>
     );
   }
@@ -459,22 +457,24 @@ export function LoadChart({ uuid, hours, active = true }: { uuid: string; hours:
     <InstancePanel
       title="负载图表"
       aside={
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>
-            <span title={coverageSummary}><strong>{coverageLabel ?? `覆盖 ${coverageSummary}`}</strong></span>
-            {" "}采样 <strong>{sampleSummary}</strong>
+        <div className="instance-chart-headmeta">
+          <div className="instance-chart-meta" aria-label="图表数据范围">
+            <span title={coverageSummary}>
+              <strong>{coverageLabel ?? `覆盖 ${coverageSummary}`}</strong>
+            </span>
+            <span>
+              采样 <strong>{sampleSummary}</strong>
+            </span>
           </div>
           <SwitchToggle label="断点连线" active={connectNulls} onToggle={() => setConnectNulls((value) => !value)} />
-          <button type="button" onClick={() => void refetch()} disabled={isFetching} aria-busy={isFetching}>
+          <button type="button" className="instance-toggle-button" onClick={() => void refetch()} disabled={isFetching} aria-busy={isFetching}>
             ⟳ {isFetching ? "刷新中" : "刷新"}
           </button>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)", border: "1px solid var(--accent)", padding: "2px 8px" }}>
-            {rangeSummary}
-          </span>
+          <span className="instance-chart-range-chip">{rangeSummary}</span>
         </div>
       }
     >
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+      <div className="instance-chart-grid">
         <ChartCard title="CPU" uuid={uuid}
           value={isRealtime && node ? `${node.cpuPct.toFixed(2)}%` : `${(points[points.length - 1]?.cpu ?? 0).toFixed(2)}%`}
           note="使用率" points={points} keys={CPU_KEYS} colors={CPU_COLORS}

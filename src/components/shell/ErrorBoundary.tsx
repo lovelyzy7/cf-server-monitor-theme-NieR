@@ -56,14 +56,17 @@ function ErrorFallback({
   diagnostics?: string;
 }) {
   return (
-    <div className="center-box" style={{ padding: 24 }}>
-      <section className="panel panel-corners" role="alert" style={{ maxWidth: 560, textAlign: "left" }}>
-        <h1 className="bracket-header" style={{ marginTop: 0 }}>{title}</h1>
-        <p style={{ color: "var(--fg-mid)", margin: "0 0 16px" }}>
-          {message || "可以刷新页面，或返回首页重新进入。"}
-        </p>
+    <div className="theme-error-shell">
+      <section className="theme-error-card" role="alert">
+        <div>
+          <p className="theme-error-kicker">Nier</p>
+          <h1 className="theme-error-title">{title}</h1>
+          <p className="theme-error-message">
+            {message || "可以刷新页面，或返回首页重新进入。"}
+          </p>
+        </div>
         {diagnostics && (
-          <details style={{ fontSize: 12, color: "var(--fg-mid)", marginBottom: 16 }}>
+          <details style={{ fontSize: 12, color: "var(--fg-mid)" }}>
             <summary style={{ cursor: "pointer", userSelect: "none" }}>
               诊断信息（反馈时请一并截图或复制）
             </summary>
@@ -91,7 +94,7 @@ function ErrorFallback({
             </button>
           </details>
         )}
-        <div style={{ display: "flex", gap: 10 }}>
+        <div className="theme-error-actions">
           <button type="button" onClick={reloadPage}>
             [ 刷新 ]
           </button>

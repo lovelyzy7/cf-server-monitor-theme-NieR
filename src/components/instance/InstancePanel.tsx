@@ -22,42 +22,16 @@ export function InstancePanel({
 }) {
   return (
     <section className={clsx("panel panel-corners", className)} style={{ marginTop: 16 }}>
-      <header
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 16,
-          flexWrap: "wrap",
-          marginBottom: 12,
-        }}
-      >
-        <div>
-          {kicker != null && (
-            <span
-              style={{
-                fontSize: 10,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: "var(--fg-mid)",
-              }}
-            >
-              {kicker}
-            </span>
-          )}
-          <h2 className="bracket-header" style={{ margin: "4px 0 4px", fontSize: 15 }}>
-            {title}
+      <header className="instance-panel-header">
+        <div className="instance-panel-headings">
+          {kicker != null && <span className="instance-panel-kicker">{kicker}</span>}
+          <div className="instance-panel-title-row">
+            <h2 className="instance-panel-title">{title}</h2>
             {titleAction}
-          </h2>
-          {description != null && (
-            <p style={{ margin: 0, color: "var(--fg-mid)", fontSize: 12 }}>{description}</p>
-          )}
-        </div>
-        {aside != null && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            {aside}
           </div>
-        )}
+          {description != null && <p className="instance-panel-description">{description}</p>}
+        </div>
+        {aside != null && <div className="instance-panel-aside">{aside}</div>}
       </header>
       {children}
     </section>
@@ -67,17 +41,7 @@ export function InstancePanel({
 export function InstanceChartLoading({ title }: { title: string }) {
   return (
     <InstancePanel title={title}>
-      <div
-        style={{
-          minHeight: 180,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 10,
-          color: "var(--fg-mid)",
-        }}
-        aria-busy
-      >
+      <div className="instance-chart-loading" aria-busy>
         <Spinner size={22} label="" />
         <span>加载中…</span>
       </div>

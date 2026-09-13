@@ -200,17 +200,17 @@ export function ThemeManage() {
 
   return (
     <div>
-      <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <Link className="button" to="/">{t("common.backHome")}</Link>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button type="button" onClick={handleReset} disabled={!isDirty || saving} title="撤销未保存的改动">重置</button>
-          <button type="button" onClick={handleRestoreSiteDefaults} disabled={saving} title="丢弃本机设置，改用后端配置">改用后端配置</button>
-          <button type="button" onClick={handleCopyJson} disabled={saving} title="导出完整配置 JSON，粘到后台主题自定义配置">复制配置 JSON</button>
-          <button type="button" onClick={() => void handleSaveLocal()} disabled={saving} aria-busy={saving}>
+      <div className="theme-masthead-topline" style={{ marginTop: 16 }}>
+        <Link className="instance-page-back" to="/">{t("common.backHome")}</Link>
+        <div className="theme-manage-toolbar-actions">
+          <button type="button" className="theme-manage-button" onClick={handleReset} disabled={!isDirty || saving} title="撤销未保存的改动">重置</button>
+          <button type="button" className="theme-manage-button" onClick={handleRestoreSiteDefaults} disabled={saving} title="丢弃本机设置，改用后端配置">改用后端配置</button>
+          <button type="button" className="theme-manage-button" onClick={handleCopyJson} disabled={saving} title="导出完整配置 JSON，粘到后台主题自定义配置">复制配置 JSON</button>
+          <button type="button" className="theme-manage-button is-primary" onClick={() => void handleSaveLocal()} disabled={saving} aria-busy={saving}>
             {saving ? "保存中…" : "保存到本机"}
           </button>
           {canSaveToSite && (
-            <button type="button" onClick={() => void handleSaveToSite()} disabled={savingSite} aria-busy={savingSite} title="直接写到后端 theme_options，所有访客生效">
+            <button type="button" className="theme-manage-button is-primary" onClick={() => void handleSaveToSite()} disabled={savingSite} aria-busy={savingSite} title="直接写到后端 theme_options，所有访客生效">
               {savingSite ? "发布中…" : "保存到后端"}
             </button>
           )}

@@ -45,6 +45,7 @@ export function PingLineSwitcher({ uuid, slot, taskName }: { uuid: string; slot:
       <button
         ref={triggerRef}
         type="button"
+        className="multi-ping-name"
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
@@ -55,17 +56,6 @@ export function PingLineSwitcher({ uuid, slot, taskName }: { uuid: string; slot:
           if (event.key !== "ArrowDown") return;
           event.preventDefault();
           setOpen(true);
-        }}
-        style={{
-          background: "transparent",
-          border: "none",
-          padding: 0,
-          color: "var(--fg-dark)",
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          letterSpacing: "0.04em",
-          cursor: "var(--cur-pointer)",
-          borderBottom: "1px dotted var(--accent)",
         }}
       >
         {taskName}
@@ -178,37 +168,17 @@ function PingLineMenu({
   };
 
   const itemStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    width: "100%",
     background: "transparent",
-    border: "none",
-    padding: "6px 10px",
-    color: "var(--fg-dark)",
-    fontFamily: "var(--font-mono)",
-    fontSize: 12,
-    textAlign: "left",
-    cursor: "var(--cur-pointer)",
   };
 
   return createPortal(
     <div
       ref={panelRef}
       id={id}
+      className="ping-line-menu"
       role="group"
       aria-label="切换线路"
       onKeyDown={handleKeyDown}
-      style={{
-        position: "fixed",
-        zIndex: 80,
-        minWidth: 160,
-        background: "var(--panel)",
-        border: "2px solid var(--accent)",
-        boxShadow: "4px 4px 0 rgba(0,0,0,0.3)",
-        padding: "4px 0",
-        overflowY: "auto",
-      }}
     >
       {options.map((taskId) => {
         const active = taskId === currentTaskId;
@@ -217,23 +187,24 @@ function PingLineMenu({
           <button
             key={taskId}
             type="button"
+            className="ping-line-menu-item"
             data-active={active ? "true" : "false"}
             aria-current={active ? "true" : undefined}
             onClick={() => select(taskId)}
-            style={{ ...itemStyle, background: active ? "var(--bg-cream-dark)" : "transparent" }}
+            style={active ? itemStyle : undefined}
           >
-            <span style={{ flex: 1 }}>{carrierTaskName(taskId, carrierNames)}</span>
-            {swaps && <span style={{ fontSize: 10, opacity: 0.6 }}>互换</span>}
+            <span className="ping-line-menu-label">{carrierTaskName(taskId, carrierNames)}</span>
+            {swaps && <span className="ping-line-menu-hint">互换</span>}
             {active && <span aria-hidden>✓</span>}
           </button>
         );
       })}
       {customized && (
         <>
-          <div role="separator" style={{ borderTop: "1px solid var(--bg-cream-dark)", margin: "4px 0" }} />
-          <button type="button" title="这台节点的线路恢复成站点设置" onClick={reset} style={itemStyle}>
+          <div className="ping-line-menu-divider" role="separator" />
+          <button type="button" className="ping-line-menu-item" title="这台节点的线路恢复成站点设置" onClick={reset}>
             <span aria-hidden>↺</span>
-            <span style={{ flex: 1 }}>恢复默认</span>
+            <span className="ping-line-menu-label">恢复默认</span>
           </button>
         </>
       )}

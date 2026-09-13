@@ -426,9 +426,9 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
   if (isError && !data?.records.length) {
     return (
       <InstancePanel title="Ping 图表">
-        <div style={{ textAlign: "center", padding: "24px 0", color: "var(--fg-mid)" }}>
+        <div className="instance-empty">
           <span>延迟历史加载失败</span>{" "}
-          <button type="button" onClick={refetchAll} disabled={isFetching} aria-busy={isFetching}>
+          <button type="button" className="instance-toggle-button" onClick={refetchAll} disabled={isFetching} aria-busy={isFetching}>
             {isFetching ? "重试中" : "重试"}
           </button>
         </div>
@@ -439,34 +439,36 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
   if (!data?.records.length) {
     return (
       <InstancePanel title="Ping 图表">
-        <div style={{ textAlign: "center", padding: "24px 0", color: "var(--fg-mid)" }}>暂无延迟记录</div>
+        <div className="instance-empty">暂无延迟记录</div>
       </InstancePanel>
     );
   }
 
   return (
     <InstancePanel title="Ping 图表" description={panelDescription}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+      <div className="instance-ping-toolbar">
         <SwitchToggle label="丢包色带" active={showLoss} onToggle={() => setShowLoss((value) => !value)}
           title="在图表上方按线路显示丢包率色带：越红丢得越多，空缺表示该时段没有采样。查询超过 1 小时时，后端按采样点数返回，区间越长采样越粗。" />
         <SwitchToggle label="削峰平滑" active={cutPeak} onToggle={() => setCutPeak((value) => !value)} title="对尖峰值做轻度平滑，仅影响图线显示" />
         <SwitchToggle label="断点连线" active={connectNulls} onToggle={() => setConnectNulls((value) => !value)}
           title="关闭：如实显示中断/丢包断点；开启：跨过所有空缺连成完整曲线。" />
-        <button type="button" onClick={toggleAll}>
+        <button type="button" className="instance-toggle-button" onClick={toggleAll}>
           {hiddenTasks.size === 0 ? "隐藏全部" : "显示全部"}
         </button>
-        <button type="button" onClick={refetchAll} disabled={isFetching} aria-busy={isFetching}>
+        <button type="button" className="instance-toggle-button" onClick={refetchAll} disabled={isFetching} aria-busy={isFetching}>
           ⟳ {isFetching ? "刷新中" : isError ? "刷新失败，重试" : "刷新"}
         </button>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+      <div className="instance-ping-tasks">
         {taskStats.map((task) => {
           const visible = !hiddenTasks.has(task.id);
           return (
             <button
               key={task.id}
               type="button"
+              className="instance-ping-task"
+              data-visible={visible ? "true" : "false"}
               onClick={() => toggleTask(task.id)}
               aria-pressed={visible}
               title={[
@@ -475,26 +477,14 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
                 `p99 ${task.p99 != null ? `${task.p99.toFixed(0)} ms` : "—"} | 抖动 ${task.volatility != null ? task.volatility.toFixed(2) : "—"}`,
                 `min ${task.min != null ? `${task.min.toFixed(0)} ms` : "—"} | max ${task.max != null ? `${task.max.toFixed(0)} ms` : "—"} | 样本 ${task.total ?? 0} | 间隔 ${task.interval}s`,
               ].join("\n")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                border: `1px solid ${visible ? task.color : "var(--bg-cream-dark)"}`,
-                background: "transparent",
-                padding: "4px 10px",
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                color: "var(--fg-dark)",
-                cursor: "var(--cur-pointer)",
-                opacity: visible ? 1 : 0.5,
-              }}
+              style={{ borderColor: visible ? task.color : "var(--bg-cream-dark)" }}
             >
-              <span aria-hidden style={{ width: 8, height: 8, background: task.color }} />
-              <span>{taskLabels.get(task.id) ?? `任务 #${task.id}`}</span>
-              <span style={{ color: task.latest != null ? latencyHeatColor(task.latest) : "var(--fg-mid)" }}>
+              <span className="instance-ping-task-dot" style={{ background: task.color }} aria-hidden />
+              <span className="instance-ping-task-name">{taskLabels.get(task.id) ?? `任务 #${task.id}`}</span>
+              <span className="instance-ping-task-primary" style={{ color: task.latest != null ? latencyHeatColor(task.latest) : "var(--fg-mid)" }}>
                 {task.latest != null ? `${task.latest.toFixed(1)} ms` : "—"}
               </span>
-              <span style={{ color: lossHeatColor(task.loss) }}>{task.loss.toFixed(1)}%</span>
+              <span className="instance-ping-task-loss" style={{ color: lossHeatColor(task.loss) }}>{task.loss.toFixed(1)}%</span>
             </button>
           );
         })}
@@ -515,7 +505,7 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
         </div>
       )}
 
-      <div ref={chartSizeRef} style={{ position: "relative" }}>
+      <div ref={chartSizeRef} className="instance-uplot-wrap is-large">
         {chart && options && visibleTasks.length > 0 ? (
           <>
             <UplotReact
@@ -526,9 +516,7 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
             <ChartTooltip tooltip={tooltip} />
           </>
         ) : (
-          <div style={{ textAlign: "center", padding: "24px 0", color: "var(--fg-mid)" }}>
-            当前已隐藏全部线路，点击上方按钮可恢复显示
-          </div>
+          <div className="instance-empty">当前已隐藏全部线路，点击上方按钮可恢复显示</div>
         )}
       </div>
     </InstancePanel>

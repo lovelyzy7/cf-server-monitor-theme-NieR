@@ -42,25 +42,22 @@ const MultiPingMetricRow = memo(function MultiPingMetricRow({
 
   return (
     <div
-      style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 18 }}
+      className="multi-ping-metric-row"
+      data-load-state={line.loadState ?? "ready"}
       title={`${line.taskName} · 延迟 ${latencyLabel} · 丢包 ${lossLabel}${staleError ? " · 刷新失败，显示上次数据" : ""}`}
     >
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, width: 92, flexShrink: 0, justifyContent: "space-between" }}>
+      <div className={clsx("multi-ping-metric-head", metric === "loss" && "is-value-only")}>
         {metric === "latency" && <PingLineSwitcher uuid={uuid} slot={slot} taskName={line.taskName} />}
         {metric === "loss" && <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.04em" }}>丢包</span>}
         <strong
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 12,
-            fontVariantNumeric: "tabular-nums",
-            color: value == null ? "var(--fg-mid)" : valueColor,
-          }}
+          className="multi-ping-value tabular"
+          style={{ color: value == null ? "var(--fg-mid)" : valueColor }}
         >
           {displayValue}
-          {value != null && <small style={{ fontSize: 10, opacity: 0.7 }}>{unit}</small>}
+          {value != null && <small>{unit}</small>}
         </strong>
       </div>
-      <span style={{ flex: 1, position: "relative" }}>
+      <span className="multi-ping-buckets">
         {metric === "latency" ? (
           <LatencyBars buckets={line.buckets} redrawKey={redrawKey} height={chartHeight} onHoverIndex={setHoveredIndex} />
         ) : (
@@ -82,7 +79,7 @@ const MultiPingMetricColumn = memo(function MultiPingMetricColumn({
   redrawKey: string;
 }) {
   return (
-    <div aria-label={metric === "latency" ? "延迟" : "丢包"} style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
+    <div className="multi-ping-metric-column" aria-label={metric === "latency" ? "延迟" : "丢包"}>
       {lines.map((line, slot) => (
         <MultiPingMetricRow key={slot} uuid={uuid} slot={slot} line={line} metric={metric} density={density} redrawKey={redrawKey} />
       ))}
@@ -103,8 +100,8 @@ export const MultiPingStatus = memo(function MultiPingStatus({
   const redrawKey = `${resolvedAppearance}:${colorsVersion}`;
 
   return (
-    <div className={clsx("multi-ping-status", className)} role="group" aria-label="各线路延迟与丢包" style={{ marginTop: 10 }}>
-      <div style={{ display: "flex", gap: 12 }}>
+    <div className={clsx("multi-ping-status", className)} role="group" aria-label="各线路延迟与丢包">
+      <div className="multi-ping-columns">
         <MultiPingMetricColumn uuid={uuid} lines={lines} metric="latency" density={density} redrawKey={redrawKey} />
         <MultiPingMetricColumn uuid={uuid} lines={lines} metric="loss" density={density} redrawKey={redrawKey} />
       </div>

@@ -6,35 +6,18 @@ export function ChartTooltip({ tooltip }: { tooltip: ChartTooltipState }) {
   return (
     <div
       aria-hidden="true"
-      style={{
-        position: "absolute",
-        left: tooltip.left,
-        top: tooltip.top,
-        zIndex: 20,
-        minWidth: 168,
-        background: "var(--panel-inverse-bg)",
-        color: "var(--panel-inverse-fg)",
-        border: "2px solid var(--accent)",
-        padding: "8px 10px",
-        fontFamily: "var(--font-mono)",
-        fontSize: 12,
-        boxShadow: "3px 3px 0 rgba(0,0,0,0.3)",
-        pointerEvents: "none",
-      }}
+      className="instance-chart-tooltip"
+      style={{ left: tooltip.left, top: tooltip.top }}
     >
-      <div style={{ borderBottom: "1px solid var(--bg-cream-dark)", marginBottom: 6, paddingBottom: 4, opacity: 0.85 }}>
-        {tooltip.time}
-      </div>
+      <div className="instance-chart-tooltip-time">{tooltip.time}</div>
       {tooltip.rows.map((row, index) => (
-        <div
-          key={`${index}-${row.label}`}
-          style={{ display: "flex", alignItems: "center", gap: 6, lineHeight: 1.5 }}
-        >
+        <div key={`${index}-${row.label}`} className="instance-chart-tooltip-row">
           <span
             aria-hidden="true"
-            style={{ width: 8, height: 8, background: row.color, flexShrink: 0 }}
+            className="instance-chart-tooltip-dot"
+            style={{ background: row.color }}
           />
-          <span style={{ opacity: 0.8, flex: 1 }}>{row.label}</span>
+          <span style={{ flex: 1, opacity: 0.85 }}>{row.label}</span>
           <strong>{row.value}</strong>
         </div>
       ))}
@@ -56,46 +39,15 @@ export function SwitchToggle({
   return (
     <button
       type="button"
+      className="instance-toggle-button instance-switch-button"
+      data-active={active ? "true" : "false"}
       onClick={onToggle}
       aria-pressed={active}
       title={title}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        background: "transparent",
-        color: "var(--fg-dark)",
-        border: "1px solid var(--accent)",
-        padding: "4px 10px",
-        fontSize: 11,
-        letterSpacing: "0.08em",
-        cursor: "var(--cur-pointer)",
-        fontFamily: "inherit",
-      }}
     >
-      <span>{label}</span>
-      <span
-        aria-hidden
-        style={{
-          display: "inline-block",
-          width: 22,
-          height: 12,
-          border: "1px solid var(--accent)",
-          background: active ? "var(--accent)" : "transparent",
-          position: "relative",
-        }}
-      >
-        <span
-          style={{
-            position: "absolute",
-            top: 1,
-            left: active ? 11 : 1,
-            width: 8,
-            height: 8,
-            background: active ? "var(--panel-inverse-fg)" : "var(--accent)",
-            transition: "left 80ms",
-          }}
-        />
+      <span className="instance-switch-copy">{label}</span>
+      <span className="instance-switch-track" aria-hidden>
+        <span className="instance-switch-thumb" />
       </span>
     </button>
   );

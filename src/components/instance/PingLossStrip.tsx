@@ -43,34 +43,17 @@ export function PingLossStrip({
   if (rows.length === 0 || times.length === 0 || trackWidth <= 0) return null;
 
   return (
-    <div style={{ width: chartWidth, margin: "0 0 4px" }}>
+    <div className="ping-loss-strip" style={{ width: chartWidth }}>
       {cursorLeft != null && cursorLeft <= trackWidth && (
         <div
           aria-hidden
-          style={{
-            position: "absolute",
-            left: gutter + cursorLeft,
-            width: 1,
-            height: rows.length * (ROW_HEIGHT + 2),
-            background: "var(--accent)",
-            pointerEvents: "none",
-          }}
+          className="ping-loss-cursor"
+          style={{ left: gutter + cursorLeft, height: rows.length * (ROW_HEIGHT + 2) }}
         />
       )}
       {rows.map((row) => (
-        <div key={row.id} style={{ display: "flex", alignItems: "center", height: ROW_HEIGHT + 2 }}>
-          <span
-            style={{
-              width: gutter,
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              color: "var(--fg-mid)",
-              letterSpacing: "0.05em",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+        <div key={row.id} className="ping-loss-row">
+          <span className="ping-loss-label" style={{ width: gutter }}>
             {row.label}
           </span>
           <LossRowCanvas

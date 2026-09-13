@@ -14,21 +14,8 @@ export function HealthBucketTooltip({
   return (
     <span
       role="status"
-      style={{
-        position: "absolute",
-        left: `clamp(42px, ${position}%, calc(100% - 42px))`,
-        transform: "translateX(-50%)",
-        top: -18,
-        background: "var(--panel-inverse-bg)",
-        color: "var(--panel-inverse-fg)",
-        border: "1px solid var(--accent)",
-        padding: "1px 6px",
-        fontFamily: "var(--font-mono)",
-        fontSize: 10,
-        whiteSpace: "nowrap",
-        pointerEvents: "none",
-        zIndex: 6,
-      }}
+      className="node-health-hover-tooltip"
+      style={{ "--node-health-tooltip-x": `clamp(42px, ${position}%, calc(100% - 42px))` } as React.CSSProperties}
     >
       {text}
     </span>

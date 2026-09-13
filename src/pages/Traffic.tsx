@@ -31,9 +31,9 @@ function formatPeakTime(timeMs: number | null, value: number) {
 
 function PeakValue({ value, timeMs }: { value: number; timeMs: number | null }) {
   return (
-    <span style={{ fontFamily: "var(--font-mono)" }}>
+    <span className="traffic-peak-value">
       <strong>{formatByteRateLabel(value)}</strong>
-      <small style={{ marginLeft: 6, color: "var(--fg-mid)" }}>{formatPeakTime(timeMs, value)}</small>
+      <small>{formatPeakTime(timeMs, value)}</small>
     </span>
   );
 }
@@ -42,13 +42,13 @@ function PeakSummaryRow({ direction, detail }: { direction: "up" | "down"; detai
   const value = direction === "up" ? detail?.stat.peakUp ?? 0 : detail?.stat.peakDown ?? 0;
   const timeMs = direction === "up" ? detail?.stat.peakUpAt ?? null : detail?.stat.peakDownAt ?? null;
   return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-      <span style={{ color: "var(--fg-mid)", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+    <div className="traffic-summary-peak-row">
+      <span className="traffic-summary-peak-label">
         {direction === "up" ? "↑ 上行" : "↓ 下行"}
       </span>
-      <span style={{ fontFamily: "var(--font-mono)" }}>
+      <span className="traffic-summary-peak-main">
         <strong>{detail ? formatByteRateLabel(value) : "—"}</strong>
-        <small style={{ marginLeft: 6, color: "var(--fg-mid)" }}>
+        <small>
           {detail && value > 0 ? `${detail.node.name} · ${formatPeakTime(timeMs, value)}` : "暂无峰值"}
         </small>
       </span>
@@ -144,42 +144,42 @@ export function Traffic() {
         </div>
       ) : (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginTop: 16 }}>
-            <div className="panel inverse panel-corners">
-              <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-mono)", fontSize: 11, opacity: 0.8 }}>
+          <div className="traffic-summary-grid">
+            <div className="panel inverse panel-corners traffic-summary-card">
+              <div className="traffic-summary-head">
                 <span>今日流量</span>
                 <span>{DAY_FORMATTER.format(now)}</span>
               </div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 28, margin: "8px 0", fontVariantNumeric: "tabular-nums" }}>
+              <strong className="traffic-summary-total">
                 {sampledDetails.length > 0 ? formatBytes(totalUp + totalDown) : "—"}
-              </div>
-              <div style={{ display: "flex", gap: 14, fontFamily: "var(--font-mono)", fontSize: 12 }}>
+              </strong>
+              <div className="traffic-summary-directions">
                 <span>↑ {formatBytes(totalUp)}</span>
                 <span>↓ {formatBytes(totalDown)}</span>
               </div>
             </div>
 
-            <div className="panel inverse panel-corners">
-              <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-mono)", fontSize: 11, opacity: 0.8 }}>
+            <div className="panel inverse panel-corners traffic-summary-card">
+              <div className="traffic-summary-head">
                 <span>今日采样峰值</span>
                 <span>统计至 {TIME_FORMATTER.format(updatedAt)}</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+              <div className="traffic-summary-peak-list">
                 <PeakSummaryRow direction="up" detail={peakUp} />
                 <PeakSummaryRow direction="down" detail={peakDown} />
               </div>
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 20, marginBottom: 10 }}>
-            <span style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--fg-mid)" }}>节点明细</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>{details.length} 台</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>峰值按历史采样计算</span>
+          <div className="assets-section-head">
+            <span className="assets-eyebrow">节点明细</span>
+            <span className="assets-count">{details.length} 台</span>
+            <span className="traffic-sample-note">峰值按历史采样计算</span>
           </div>
 
           {!isMobileLayout ? (
-            <div className="panel" style={{ overflowX: "auto" }}>
-              <table className="monitor">
+            <div className="panel assets-table-wrap">
+              <table className="monitor assets-table">
                 <thead>
                   <tr>
                     <th>节点</th>
@@ -205,12 +205,12 @@ export function Traffic() {
                           </td>
                           <td data-numeric data-strong>
                             {stat.hasSamples ? (
-                              <span style={{ fontFamily: "var(--font-mono)" }}>
+                              <span className="traffic-volume-value">
                                 <strong>{formatBytes(total)}</strong>
-                                <small style={{ marginLeft: 6, color: "var(--fg-mid)" }}>↑ {formatBytes(stat.trafficUp)} · ↓ {formatBytes(stat.trafficDown)}</small>
+                                <small>↑ {formatBytes(stat.trafficUp)} · ↓ {formatBytes(stat.trafficDown)}</small>
                               </span>
                             ) : (
-                              <span style={{ color: "var(--fg-mid)" }}>无数据</span>
+                              <span className="traffic-no-data">无数据</span>
                             )}
                           </td>
                           <td data-numeric>{stat.hasSamples ? <PeakValue value={stat.peakUp} timeMs={stat.peakUpAt} /> : "—"}</td>
@@ -231,7 +231,7 @@ export function Traffic() {
               </table>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="assets-card-list">
               {details.map(({ node, stat, total }) => {
                 const expanded = expandedUuid === node.uuid;
                 const detailId = `traffic-mobile-detail-${node.uuid}`;

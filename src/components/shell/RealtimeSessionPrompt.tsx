@@ -35,35 +35,24 @@ export function RealtimeSessionPrompt() {
 
   return (
     <section
-      className="banner"
+      className="banner realtime-session-prompt"
       aria-labelledby={titleId}
       aria-live="polite"
-      style={{
-        position: "fixed",
-        left: 16,
-        right: 16,
-        bottom: 16,
-        zIndex: 60,
-        display: "flex",
-        alignItems: "center",
-        gap: 16,
-        flexWrap: "wrap",
-        margin: 0,
-      }}
     >
-      <span style={{ flex: "1 1 200px", minWidth: 0 }}>
+      <div className="realtime-session-prompt-body">
         <strong id={titleId}>&gt; 实时连接已达到时限并断开</strong>
-        <br />
-        {minutes > 0 ? `站点限制单次实时连接 ${minutes} 分钟，` : ""}页面停在断开前的数据。
-      </span>
-      <span style={{ display: "inline-flex", gap: 10 }}>
+        <p>
+          {minutes > 0 ? `站点限制单次实时连接 ${minutes} 分钟，` : ""}页面停在断开前的数据。
+        </p>
+      </div>
+      <div className="realtime-session-prompt-actions">
         <button type="button" onClick={() => setDismissed(true)}>
           关闭
         </button>
         <button type="button" onClick={resumeRealtimeSession}>
           继续接收
         </button>
-      </span>
+      </div>
     </section>
   );
 }

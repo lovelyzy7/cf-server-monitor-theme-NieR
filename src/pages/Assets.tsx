@@ -78,13 +78,13 @@ function assetsRenewalLabel(daysRemaining: number) {
 }
 
 function HeroMoney({ value }: { value: number | null }) {
-  if (value == null) return <span style={{ fontFamily: "var(--font-mono)", fontSize: 30, opacity: 0.6 }}>计算中</span>;
+  if (value == null) return <span className="assets-hero-value is-pending">计算中</span>;
   const [int, frac = "00"] = formatCnyMoney(value).replace("¥", "").trim().split(".");
   return (
-    <span style={{ fontFamily: "var(--font-mono)", fontSize: 30, fontVariantNumeric: "tabular-nums" }}>
-      <span style={{ fontSize: 18, opacity: 0.7 }}>¥</span>
+    <span className="assets-hero-value">
+      <span className="assets-hero-currency">¥</span>
       {int}
-      <span style={{ fontSize: 18, opacity: 0.7 }}>.{frac}</span>
+      <span className="assets-hero-frac">.{frac}</span>
     </span>
   );
 }
@@ -183,37 +183,38 @@ export function Assets() {
         </div>
       ) : (
         <>
-          <div className="panel inverse panel-corners" style={{ marginTop: 16 }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 24, flexWrap: "wrap" }}>
-              <div style={{ minWidth: 200 }}>
-                <span style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", opacity: 0.7 }}>剩余价值</span>
-                <div><HeroMoney value={summary ? summary.remainingCny : null} /></div>
-              </div>
-              <dl className="kv" style={{ flex: 1, gridTemplateColumns: "140px 1fr", minWidth: 280 }}>
-                {ledgerRows.map((row) => (
-                  <div key={row.label} style={{ display: "contents" }}>
-                    <dt>{row.label}</dt>
-                    <dd style={{ color: row.tone }} title={row.title}>{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
+          <div className="panel inverse panel-corners assets-hero" style={{ marginTop: 16, position: "relative" }}>
+            <span className="assets-hero-mark" aria-hidden>¥</span>
+            <div className="assets-hero-main">
+              <span className="assets-eyebrow" title="按各节点账单价格折算的剩余价值，不含收购溢价">
+                剩余价值
+              </span>
+              <div><HeroMoney value={summary ? summary.remainingCny : null} /></div>
             </div>
+            <dl className="assets-ledger">
+              {ledgerRows.map((row) => (
+                <div className="assets-ledger-row" key={row.label} title={row.title}>
+                  <dt>{row.label}</dt>
+                  <dd style={row.tone ? { color: row.tone } : undefined}>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 20, marginBottom: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--fg-mid)" }}>明细</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>{detailRows.length} 台</span>
+          <div className="assets-section-head">
+            <span className="assets-eyebrow">明细</span>
+            <span className="assets-count">{detailRows.length} 台</span>
             {renewalReminders.length > 0 && (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--danger)" }}>◆ {renewalReminders.length} 台临期</span>
+              <span className="assets-renewal-inline">◆ {renewalReminders.length} 台临期</span>
             )}
             {isMobileLayout && (
-              <span style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
+              <span className="cost-summary-sort-tabs" role="group" aria-label="排序字段">
                 {MOBILE_SORT_OPTIONS.map((option) => (
-                  <button key={option.field} type="button" className="tab-btn" data-active={sortField === option.field} onClick={() => handleSort(option.field)} style={{ padding: "4px 10px" }}>
+                  <button key={option.field} type="button" className="cost-summary-sort-tab" data-active={sortField === option.field} onClick={() => handleSort(option.field)}>
                     {option.label}
                   </button>
                 ))}
-                <button type="button" className="tab-btn" onClick={() => setSortDirection((value) => (value === "asc" ? "desc" : "asc"))} style={{ padding: "4px 10px" }}>
+                <button type="button" className="cost-summary-action is-direction" onClick={() => setSortDirection((value) => (value === "asc" ? "desc" : "asc"))}>
                   {directionIcon}
                 </button>
               </span>
@@ -223,8 +224,8 @@ export function Assets() {
           {summary ? (
             <>
               {!isMobileLayout ? (
-                <div className="panel" style={{ overflowX: "auto" }}>
-                  <table className="monitor">
+                <div className="panel assets-table-wrap">
+                  <table className="monitor assets-table">
                     <thead>
                       <tr>
                         {TABLE_COLUMNS.map((column) => (
@@ -244,13 +245,13 @@ export function Assets() {
                         return (
                           <tr key={detail.uuid} data-counted={detail.counted}>
                             <td>
-                              <Link to={`/server/${encodeURIComponent(detail.uuid)}`} style={{ display: "inline-flex", alignItems: "center", gap: 8 }} title={detail.name}>
+                              <Link to={`/server/${encodeURIComponent(detail.uuid)}`} className="assets-node-link" title={detail.name}>
                                 <Flag region={detail.region} size={12} />
                                 <span>{detail.name}</span>
                               </Link>
                             </td>
                             <td data-numeric>
-                              {detail.counted ? `${formatCnyMoney(detail.priceCny)}/${formatBillingCycle(detail.billingCycleDays)}` : <span style={{ color: "var(--fg-mid)" }}>{detail.note}</span>}
+                              {detail.counted ? `${formatCnyMoney(detail.priceCny)}/${formatBillingCycle(detail.billingCycleDays)}` : <span className="assets-note-chip">{detail.note}</span>}
                             </td>
                             <td data-numeric data-strong>{detail.counted ? formatCnyMoney(detail.remainingCny) : "—"}</td>
                             <td data-numeric>
@@ -263,7 +264,7 @@ export function Assets() {
                             </td>
                             <td data-numeric>
                               {reminder ? (
-                                <span style={{ color: renewalTone === "critical" ? "var(--status-error)" : "var(--status-warning)" }}>
+                                <span className="assets-expiry-reminder" data-tone={renewalTone}>
                                   {formatCostExpiry(detail.expiredAt)} <small>{renewalLabel}</small>
                                 </span>
                               ) : formatCostExpiry(detail.expiredAt)}
@@ -275,31 +276,36 @@ export function Assets() {
                   </table>
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div className="assets-card-list">
                   {detailRows.map((detail) => {
                     const reminder = renewalByUuid.get(detail.uuid);
                     const renewalTone = reminder ? assetsRenewalTone(reminder.daysRemaining) : undefined;
                     const renewalLabel = reminder ? assetsRenewalLabel(reminder.daysRemaining) : undefined;
                     const priceLabel = detail.note || `${formatCnyMoney(detail.priceCny)}/${formatBillingCycle(detail.billingCycleDays)}`;
                     return (
-                      <div className="panel" key={detail.uuid} title={detail.name}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                          <Link to={`/server/${encodeURIComponent(detail.uuid)}`} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                      <div className="panel cost-summary-detail-item" key={detail.uuid} data-counted={detail.counted} data-renewal-tone={renewalTone} title={detail.name}>
+                        <div className="cost-summary-detail-head">
+                          <Link to={`/server/${encodeURIComponent(detail.uuid)}`} className="cost-summary-detail-name">
                             <Flag region={detail.region} size={12} />
-                            <span>{detail.name}</span>
+                            <span className="cost-summary-detail-title">{detail.name}</span>
                           </Link>
                           <strong style={{ fontFamily: "var(--font-mono)" }} title="剩余价值">{detail.counted ? formatCnyMoney(detail.remainingCny) : "—"}</strong>
                         </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6, fontFamily: "var(--font-mono)", fontSize: 11 }}>
-                          <span style={{ color: "var(--fg-mid)" }}>{priceLabel}</span>
+                        <div className="cost-summary-detail-meta">
+                          <span className="cost-summary-price-chip">{priceLabel}</span>
                           {detail.premiumCny !== 0 && (
-                            <span style={{ color: premiumTone(detail.premiumCny) }} title="收购溢价">{formatSignedCny(detail.premiumCny)} 溢价</span>
+                            <span className="cost-summary-premium-chip" style={{ "--cost-premium-color": premiumTone(detail.premiumCny) } as React.CSSProperties} title="收购溢价">
+                              {formatSignedCny(detail.premiumCny)} 溢价
+                            </span>
                           )}
                           {detail.premiumCny !== 0 && detail.amortMonths != null && (
-                            <span style={{ color: "var(--fg-mid)" }}>月摊 {formatSignedCny(detail.premiumMonthlyCny)} · 摊 {Math.round(detail.amortMonths)} 月</span>
+                            <span className="cost-summary-premium-chip" title="溢价月摊">
+                              月摊 {formatSignedCny(detail.premiumMonthlyCny)} · 摊 {Math.round(detail.amortMonths)} 月
+                            </span>
                           )}
-                          <span style={{ color: renewalTone === "critical" ? "var(--status-error)" : renewalTone === "warning" ? "var(--status-warning)" : "var(--fg-mid)" }}>
-                            {formatCostExpiry(detail.expiredAt)}{renewalLabel && <small> {renewalLabel}</small>}
+                          <span className="cost-summary-expire-label" data-tone={renewalTone}>
+                            {formatCostExpiry(detail.expiredAt)}
+                            {renewalLabel && <small>{renewalLabel}</small>}
                           </span>
                         </div>
                       </div>
@@ -309,29 +315,29 @@ export function Assets() {
               )}
             </>
           ) : (
-            <div className="panel" style={{ textAlign: "center", padding: "24px 0", color: "var(--fg-mid)" }}>
+            <div className="cost-summary-empty">
               {ratesFetching ? "费用明细加载中" : "汇率获取失败，点击右上角刷新重试"}
             </div>
           )}
 
-          <details className="panel" style={{ marginTop: 16 }}>
-            <summary style={{ cursor: "var(--cur-pointer)" }}>
+          <details className="panel cost-summary-rate-details" style={{ marginTop: 16 }}>
+            <summary>
               <span style={{ letterSpacing: "0.14em", textTransform: "uppercase", fontSize: 12 }}>汇率</span>{" "}
               <strong style={{ fontFamily: "var(--font-mono)", fontSize: 12, marginLeft: 8 }}>
                 {exchangeRateRows.length > 0 ? exchangeRateRows.slice(0, 3).map((item) => `${item.code} ${formatCnyMoney(item.value)}`).join(" · ") : "暂无汇率"}
               </strong>
             </summary>
             {exchangeRateRows.length > 0 ? (
-              <div className="kv" style={{ marginTop: 10, gridTemplateColumns: "120px 1fr" }}>
+              <div className="cost-summary-rate-list">
                 {exchangeRateRows.map((item) => (
-                  <div key={item.code} style={{ display: "contents" }}>
-                    <dt>1 {item.code}</dt>
-                    <dd>{formatCnyMoney(item.value)}</dd>
+                  <div className="cost-summary-rate-item" key={item.code}>
+                    <span>1 {item.code}</span>
+                    <strong>{formatCnyMoney(item.value)}</strong>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ color: "var(--fg-mid)", marginTop: 10 }}>暂无可用汇率</div>
+              <div className="cost-summary-empty" style={{ padding: "8px 0" }}>暂无可用汇率</div>
             )}
           </details>
         </>

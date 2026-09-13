@@ -1,5 +1,16 @@
 # 更新日志
 
+## v1.1.0
+
+应用步骤写入 README，并把 LuminaPlus 的结构化样式（surface/home/node-card/cost-summary/traffic-stats）以 NieR 视觉语言合并进 `theme.css`：
+
+- README 新增「发布到仓库 + 后台应用 + 自定义主题 URL 格式 + 注意事项」完整步骤
+- 实例详情页（面板头/分段控件/开关/图表卡片/线路卡/丢包色带/空态）
+- 首页（多线路行/线路切换菜单/柱状 tooltip）
+- 流量页与资产页（汇总卡/明细表/账本/到期提醒/汇率）
+- 主题设置页工具栏、错误页、实时连接时限浮条
+- 视觉全部保持 NieR 风格：直角、米白/炭黑、等宽数值、`[ 标题 ]`、`--cur-*` 光标
+
 ## v1.0.0
 
 NieR:Automata Bunker Terminal 风格外壳 + LuminaPlus 数据层移植，含首页延迟柱与详情页负载/Ping 图表。

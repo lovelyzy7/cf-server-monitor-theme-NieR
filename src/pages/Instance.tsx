@@ -88,7 +88,7 @@ export function Instance() {
         : null;
     return (
       <div className="center-box">
-        <Link className="button" to="/">{t("common.back")}</Link>
+        <Link className="instance-page-back" to="/">{t("common.back")}</Link>
         <p style={{ color: "var(--fg-mid)" }}>{message ?? t("common.loading")}</p>
       </div>
     );
@@ -100,7 +100,7 @@ export function Instance() {
   return (
     <div>
       <div style={{ marginTop: 16 }}>
-        <Link className="button" to="/">{t("common.back")}</Link>
+        <Link className="instance-page-back" to="/">{t("common.back")}</Link>
       </div>
 
       <h1 className="bracket-header">
