@@ -125,11 +125,11 @@
   color: #e6dfc9;
   border-color: #968e75;
 }
-:root[data-appearance="dark"] .terminal-bar .control-button:hover,
 :root[data-appearance="dark"] .terminal-bar .control-button.is-active {
   background: #e6dfc9;
   color: #060504;
 }
+/* 深色下的悬停态与浅色一起收进 @media (hover: hover)，见下方第 4 节 */
 :root[data-appearance="dark"] .lang-toggle {
   color: #e6dfc9;
   border-color: #968e75;
@@ -199,10 +199,20 @@ html {
   cursor: var(--cur-pointer);
   transition: background 80ms, color 80ms;
 }
-.terminal-bar .control-button:hover,
 .terminal-bar .control-button.is-active {
   background: var(--bg-cream);
   color: #16150f;
+}
+/* 悬停只在真有鼠标的设备上生效：触屏点按后不再“粘住”白色高亮 */
+@media (hover: hover) {
+  .terminal-bar .control-button:hover {
+    background: var(--bg-cream);
+    color: #16150f;
+  }
+  :root[data-appearance="dark"] .terminal-bar .control-button:hover {
+    background: #e6dfc9;
+    color: #060504;
+  }
 }
 .terminal-bar .control-button[aria-busy="true"] {
   cursor: var(--cur-progress);
@@ -3421,5 +3431,28 @@ body .metric-color-swatch input {
   }
   .theme-manage textarea {
     overflow: hidden;
+  }
+}
+
+/* ====================================================================
+ * 30. 设置页滚动条彻底清除（!important 覆盖一切旧规则）
+ * ==================================================================== */
+@media (max-width: 720px) {
+  .theme-manage .panel,
+  .theme-manage .panel-corners,
+  .theme-manage .tab-bar,
+  .theme-manage .group-order-list {
+    overflow: visible !important;
+    scrollbar-width: none !important;
+  }
+  .theme-manage textarea {
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+    resize: none;
+  }
+  .theme-manage *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
   }
 }

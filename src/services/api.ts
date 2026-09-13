@@ -473,7 +473,7 @@ export async function refreshPingHistory(
 export async function getLoadRecords(
   uuid: string,
   hours = 6,
-  options?: RequestOptions,
+  options?: RequestOptions & { cache?: boolean },
 ): Promise<LoadRecordsResponse> {
   const rows = await fetchHistoryRows(uuid, hours, options);
   const records = rows.map((row) => historyRowToLoadRecord(row, uuid));

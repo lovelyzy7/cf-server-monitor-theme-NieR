@@ -116,12 +116,35 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
   const { appearance, setAppearance } = usePreferences();
   const { lang, setLang, t } = useLanguage();
   const themeSettings = useThemeSettings();
-  const showAdmin = themeSettings.isReady && themeSettings.enableAdminButton;
+  // 初始化（config 未到）时先显示，避免底部后台按钮闪没；配置到达后按开关决定。
+  const showAdmin = !themeSettings.isReady || themeSettings.enableAdminButton;
   const [colorsOpen, setColorsOpen] = useState(false);
   const [colorsMounted, setColorsMounted] = useState(false);
+  const colorsRootRef = useRef<HTMLDivElement | null>(null);
+  const colorsButtonRef = useRef<HTMLButtonElement | null>(null);
   const summaries = useHomeNodeSummaries();
   const storeStatus = useNodeStoreStatus();
   const location = useLocation();
+
+  // COLORS 面板：点击外部 / Esc 关闭。
+  useEffect(() => {
+    if (!colorsOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (colorsRootRef.current?.contains(target)) return;
+      if (colorsButtonRef.current?.contains(target)) return;
+      setColorsOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setColorsOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [colorsOpen]);
 
   const siteTitle = config?.sitename?.trim() || "CF-Server-Monitor";
   const online = summaries.filter((s) => s.online).length;
@@ -182,8 +205,9 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           </div>
           <ViewModeDropdown />
           <button
+            ref={colorsButtonRef}
             type="button"
-            className="control-button"
+            className={clsx("control-button", colorsOpen && "is-active")}
             aria-pressed={colorsOpen}
             title="卡片配色"
             onClick={() => {
@@ -242,7 +266,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
       </nav>
       {colorsMounted && (
         <Suspense fallback={null}>
-          <div className="terminal-bar-picker">
+          <div className="terminal-bar-picker" ref={colorsRootRef}>
             <MetricColorPicker hidden={!colorsOpen} />
           </div>
         </Suspense>

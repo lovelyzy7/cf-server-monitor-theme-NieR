@@ -7,10 +7,12 @@ import { useMinuteClock } from "@/hooks/useClock";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTodayTrafficStats } from "@/hooks/useTodayTrafficStats";
 import { useVisibleNodes } from "@/hooks/useVisibleNodes";
+import { useHomeNodeSummaries } from "@/hooks/useNode";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { getLoadRecords } from "@/services/api";
 import { formatByteRateLabel, formatBytes } from "@/utils/format";
+import { speedRateColor } from "@/utils/metricTone";
 import {
   buildTodayTrafficRecordSamples,
   summarizeTodayTrafficRecords,
@@ -201,18 +203,30 @@ function TrafficDetailToggle({ expanded, onClick }: { expanded: boolean; control
   );
 }
 
-function TrafficSampleChart({ id, samples }: { id: string; samples: TodayTrafficSample[] }) {
+function TrafficSampleChart({
+  id,
+  samples,
+  live,
+}: {
+  id: string;
+  samples: TodayTrafficSample[];
+  live: { up: number; down: number } | null;
+}) {
+  // 追加一个实时采样点（来自 WebSocket 当前网速），图表右端始终是最新值。
+  const merged = live
+    ? [...samples, { timeMs: Date.now(), up: live.up, down: live.down }]
+    : samples;
   return (
     <section id={id} className="panel" aria-label="网络上下行明细" style={{ marginTop: 8 }}>
       <header style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
         <strong style={{ letterSpacing: "0.12em", textTransform: "uppercase", fontSize: 13 }}>当日网络上下行</strong>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>{samples.length} 个采样</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>{merged.length} 个采样</span>
       </header>
-      {samples.length === 0 ? (
+      {merged.length === 0 ? (
         <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>当日暂无速率采样</div>
       ) : (
         <Suspense fallback={<div style={{ padding: "20px 0", textAlign: "center" }}><Spinner size={18} /></div>}>
-          <TrafficRateChart samples={samples} />
+          <TrafficRateChart samples={merged} />
         </Suspense>
       )}
     </section>
@@ -229,7 +243,16 @@ export function Traffic() {
   const { data: me } = useAuth();
   const isMobileLayout = useMediaQuery(TRAFFIC_MOBILE_QUERY);
   const nodes = useVisibleNodes();
+  const summaries = useHomeNodeSummaries();
   const uuids = useMemo(() => nodes.map((node) => node.uuid), [nodes]);
+  // 实时网速（来自 WebSocket 的当前速率），与历史积分数据并行展示。
+  const liveByUuid = useMemo(() => {
+    const map = new Map<string, { up: number; down: number }>();
+    for (const summary of summaries) {
+      map.set(summary.uuid, { up: summary.netUp || 0, down: summary.netDown || 0 });
+    }
+    return map;
+  }, [summaries]);
   // 未登录访客查不了超过 24 小时的历史，往期只给登录用户。
   const maxDayOffset = me?.logged_in ? 6 : 0;
   const todayStartMs = localDayStart(now);
@@ -249,7 +272,7 @@ export function Traffic() {
   const pastQueries = useQueries({
     queries: uuids.map((uuid) => ({
       queryKey: ["traffic-day", uuid, dayStartMs],
-      queryFn: ({ signal }: { signal: AbortSignal }) => getLoadRecords(uuid, hours, { signal }),
+      queryFn: ({ signal }: { signal: AbortSignal }) => getLoadRecords(uuid, hours, { signal, cache: false }),
       enabled: effectiveOffset > 0,
       staleTime: 5 * 60 * 1000,
       retry: 1,
@@ -309,6 +332,15 @@ export function Traffic() {
     };
   }, [details]);
   const updatedAt = data?.rangeEndMs ?? now;
+  const { liveTotalUp, liveTotalDown } = useMemo(() => {
+    let up = 0;
+    let down = 0;
+    for (const live of liveByUuid.values()) {
+      up += live.up;
+      down += live.down;
+    }
+    return { liveTotalUp: up, liveTotalDown: down };
+  }, [liveByUuid]);
 
   const handleSort = (field: TrafficSortField) => {
     if (field === sortField) setSortDirection((value) => (value === "asc" ? "desc" : "asc"));
@@ -372,6 +404,10 @@ export function Traffic() {
                 <span>↑ {formatBytes(totalUp)}</span>
                 <span>↓ {formatBytes(totalDown)}</span>
               </div>
+              <div className="traffic-summary-directions" style={{ marginTop: 6, borderTop: "1px solid rgba(216,209,187,0.15)", paddingTop: 6 }}>
+                <span style={{ color: speedRateColor("MB/s") }}>实时 ↑ {formatByteRateLabel(liveTotalUp)}</span>
+                <span style={{ color: speedRateColor("MB/s") }}>↓ {formatByteRateLabel(liveTotalDown)}</span>
+              </div>
             </div>
 
             <div className="panel inverse panel-corners traffic-summary-card">
@@ -404,6 +440,7 @@ export function Traffic() {
                         </button>
                       </th>
                     ))}
+                    <th data-numeric>实时</th>
                     <th data-action>操作</th>
                   </tr>
                 </thead>
@@ -433,13 +470,19 @@ export function Traffic() {
                           </td>
                           <td data-numeric>{stat.hasSamples ? <PeakValue value={stat.peakUp} timeMs={stat.peakUpAt} /> : "—"}</td>
                           <td data-numeric>{stat.hasSamples ? <PeakValue value={stat.peakDown} timeMs={stat.peakDownAt} /> : "—"}</td>
+                          <td data-numeric>
+                            <span className="node-list-stack" style={{ display: "inline-flex", flexDirection: "column", gap: 2 }}>
+                              <span style={{ color: speedRateColor("MB/s") }}>↑ {formatByteRateLabel(liveByUuid.get(node.uuid)?.up)}</span>
+                              <span style={{ color: speedRateColor("MB/s") }}>↓ {formatByteRateLabel(liveByUuid.get(node.uuid)?.down)}</span>
+                            </span>
+                          </td>
                           <td data-action>
                             <TrafficDetailToggle expanded={expanded} controlsId={detailId} onClick={() => setExpandedUuid(expanded ? null : node.uuid)} />
                           </td>
                         </tr>
                         {expanded && (
                           <tr>
-                            <td colSpan={5}><TrafficSampleChart id={detailId} samples={samples} /></td>
+                            <td colSpan={6}><TrafficSampleChart id={detailId} samples={samples} live={liveByUuid.get(node.uuid) ?? null} /></td>
                           </tr>
                         )}
                       </Fragment>
@@ -472,6 +515,10 @@ export function Traffic() {
                           <span>↑ {formatBytes(stat.trafficUp)}</span>
                           <span>↓ {formatBytes(stat.trafficDown)}</span>
                         </div>
+                        <div style={{ display: "flex", gap: 14, fontFamily: "var(--font-mono)", fontSize: 12, marginTop: 2, color: "var(--fg-mid)" }}>
+                          <span>实时 ↑ {formatByteRateLabel(liveByUuid.get(node.uuid)?.up)}</span>
+                          <span>↓ {formatByteRateLabel(liveByUuid.get(node.uuid)?.down)}</span>
+                        </div>
                         <dl className="kv" style={{ marginTop: 8, gridTemplateColumns: "120px 1fr" }}>
                           <dt>上行峰值</dt>
                           <dd><PeakValue value={stat.peakUp} timeMs={stat.peakUpAt} /></dd>
@@ -480,7 +527,7 @@ export function Traffic() {
                         </dl>
                       </>
                     )}
-                    {expanded && <TrafficSampleChart id={detailId} samples={samples} />}
+                    {expanded && <TrafficSampleChart id={detailId} samples={samples} live={liveByUuid.get(node.uuid) ?? null} />}
                   </div>
                 );
               })}

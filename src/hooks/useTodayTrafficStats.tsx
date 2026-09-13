@@ -302,6 +302,7 @@ async function loadTodayTrafficByNode(
         const data = await getLoadRecords(uuid, rangeHours, {
           signal,
           timeout: NODE_REQUEST_TIMEOUT_MS,
+          cache: false,
         });
         return {
           row: summarizeTodayTrafficRecords(uuid, data.records, startMs, endMs),
