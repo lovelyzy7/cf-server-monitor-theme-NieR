@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePreferences } from "@/hooks/usePreferences";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
@@ -10,26 +10,20 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { getAdminUrl } from "@/services/cfsm/config";
 import { clsx } from "clsx";
-import type { Appearance } from "@/utils/themeSettings";
-import type { NodeViewMode } from "@/utils/themeSettings";
+import type { Appearance, NodeViewMode } from "@/utils/themeSettings";
 
-const APPEARANCE_NEXT: Record<Appearance, Appearance> = {
-  light: "system",
-  system: "dark",
-  dark: "light",
-};
-const APPEARANCE_LABEL: Record<Appearance, string> = {
-  light: "LIGHT",
-  system: "SYSTEM",
-  dark: "DARK",
-};
+const APPEARANCE_OPTIONS: Array<{ value: Appearance; label: string; title: string }> = [
+  { value: "light", label: "LIGHT", title: "浅色" },
+  { value: "system", label: "SYSTEM", title: "跟随系统" },
+  { value: "dark", label: "DARK", title: "深色" },
+];
 
-const VIEW_MODE_LABEL: Record<NodeViewMode, string> = {
-  large: "LARGE",
-  compact: "COMPACT",
-  mini: "MINI",
-  list: "LIST",
-};
+const VIEW_MODE_OPTIONS: Array<{ value: NodeViewMode; label: string }> = [
+  { value: "large", label: "LARGE" },
+  { value: "compact", label: "COMPACT" },
+  { value: "mini", label: "MINI" },
+  { value: "list", label: "LIST" },
+];
 
 function buildRefreshTitle(state: PingHistoryRefreshState): string {
   if (state.status === "loading") return `正在拉取 ${state.nodeCount} 台节点最近 1 小时的延迟历史…`;
@@ -45,17 +39,81 @@ const MetricColorPicker = lazy(() =>
   import("@/components/shell/MetricColorPicker").then((module) => ({ default: module.MetricColorPicker })),
 );
 
+function ViewModeDropdown() {
+  const { mode, setMode } = useViewMode();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const panelId = useId();
+  const current = VIEW_MODE_OPTIONS.find((option) => option.value === mode)?.label ?? "LARGE";
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="terminal-view-mode" ref={rootRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="control-button"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        title="切换卡片视图"
+        onClick={() => setOpen((value) => !value)}
+      >
+        {current} <span aria-hidden>▾</span>
+      </button>
+      {open && (
+        <div id={panelId} className="home-sort-panel" role="group" aria-label="卡片视图">
+          {VIEW_MODE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              className="home-sort-item"
+              data-active={mode === option.value ? "true" : "false"}
+              aria-current={mode === option.value ? "true" : undefined}
+              onClick={() => {
+                setMode(option.value);
+                setOpen(false);
+                triggerRef.current?.focus();
+              }}
+            >
+              <span className="home-sort-item-label">{option.label}</span>
+              {mode === option.value && <span aria-hidden>✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * 顶部「Bunker Terminal」状态栏 + 主导航。
  *
  * 左侧：YoRHa · Bunker Terminal · 站点标题 + 在线读数。
- * 右侧：外观 / 视图 / 配色 / 刷新延迟 / 主题设置 / 后台，终端胶囊按钮。
+ * 右侧：外观三键 / 视图下拉 / 配色 / 刷新延迟 / 主题设置 / 后台 / 语言，终端胶囊按钮。
  */
 export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshState }) {
   const { data: config } = usePublicConfig();
   const { data: me } = useAuth();
   const { appearance, setAppearance } = usePreferences();
-  const { mode, nextMode, toggleMode } = useViewMode();
   const { lang, setLang, t } = useLanguage();
   const themeSettings = useThemeSettings();
   const showAdmin = themeSettings.isReady && themeSettings.enableAdminButton;
@@ -68,8 +126,6 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
   const siteTitle = config?.sitename?.trim() || "CF-Server-Monitor";
   const online = summaries.filter((s) => s.online).length;
   const total = summaries.length;
-  const viewLabel = VIEW_MODE_LABEL[mode];
-  const viewNextLabel = VIEW_MODE_LABEL[nextMode];
   const refreshTitle = buildRefreshTitle(pingRefresh);
   const refreshActive = pingRefresh.status === "loading";
 
@@ -107,22 +163,21 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           >
             <span className={clsx(refreshActive && "spin")}>⟳</span> REFRESH
           </button>
-          <button
-            type="button"
-            className="control-button"
-            onClick={() => setAppearance(APPEARANCE_NEXT[appearance])}
-            title="切换外观（明 / 跟随系统 / 暗）"
-          >
-            {APPEARANCE_LABEL[appearance]}
-          </button>
-          <button
-            type="button"
-            className="control-button"
-            onClick={toggleMode}
-            title={`切换卡片视图，点击后变为 ${viewNextLabel}`}
-          >
-            {viewLabel}
-          </button>
+          <div className="control-group" role="group" aria-label="外观选择">
+            {APPEARANCE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={clsx("control-button", appearance === option.value && "is-active")}
+                aria-pressed={appearance === option.value}
+                title={option.title}
+                onClick={() => setAppearance(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <ViewModeDropdown />
           <button
             type="button"
             className="control-button"
@@ -149,7 +204,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           )}
           <button
             type="button"
-            className="lang-toggle"
+            className="control-button"
             onClick={() => setLang(lang === "zh" ? "en" : "zh")}
             aria-label="切换语言"
             title="切换语言 / Switch language"

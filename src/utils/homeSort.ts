@@ -2,7 +2,7 @@ import type { HomeNodeSummary } from "@/services/wsStore";
 
 // 首页临时排序；默认使用后端 weight，离线节点始终沉底。
 
-export type HomeSortField = "default" | "name" | "speed" | "traffic" | "price";
+export type HomeSortField = "default" | "name" | "speed" | "traffic";
 export type HomeSortDirection = "asc" | "desc";
 
 export const HOME_SORT_FIELDS: readonly HomeSortField[] = [
@@ -10,7 +10,6 @@ export const HOME_SORT_FIELDS: readonly HomeSortField[] = [
   "name",
   "speed",
   "traffic",
-  "price",
 ];
 
 export const HOME_SORT_FIELD_LABELS: Record<HomeSortField, string> = {
@@ -18,7 +17,6 @@ export const HOME_SORT_FIELD_LABELS: Record<HomeSortField, string> = {
   name: "名称",
   speed: "实时网速",
   traffic: "累计流量",
-  price: "价格",
 };
 
 // 每个维度的自然默认方向:文本升序(A→Z),数值降序(高的在前)。
@@ -27,7 +25,6 @@ export const HOME_SORT_NATURAL_DIRECTION: Record<HomeSortField, HomeSortDirectio
   name: "asc",
   speed: "desc",
   traffic: "desc",
-  price: "desc",
 };
 
 export function isHomeSortField(value: unknown): value is HomeSortField {
@@ -48,9 +45,7 @@ export interface HomeSortContext {
   nameByUuid: Map<string, string>;
   /** uuid → 近 3 样本平均总速率(字节/秒),仅「实时网速」维度用。 */
   speedAvgByUuid: Map<string, number>;
-  /** uuid → 月化价格(CNY),无价格为 null,仅「价格」维度用。 */
-  priceByUuid: Map<string, number | null>;
-  /** 通过滞回门、当前算「活跃」的节点集合,仅「实时网速」维度用。 */
+  /** 参与「实时网速」排序的在线节点集合。 */
   speedActive: Set<string>;
 }
 
@@ -58,7 +53,6 @@ export interface HomeSortContext {
 function segmentOf(node: HomeNodeSummary, field: HomeSortField, ctx: HomeSortContext): 0 | 1 | 2 {
   if (node.online === false) return 2;
   if (field === "speed") return ctx.speedActive.has(node.uuid) ? 0 : 1;
-  if (field === "price") return ctx.priceByUuid.get(node.uuid) != null ? 0 : 1;
   return 0;
 }
 
@@ -74,8 +68,6 @@ function primaryValue(
       return ctx.speedAvgByUuid.get(node.uuid) ?? 0;
     case "traffic":
       return (node.trafficUp || 0) + (node.trafficDown || 0);
-    case "price":
-      return ctx.priceByUuid.get(node.uuid) ?? 0;
     case "default":
     default:
       return node.weight;

@@ -34,7 +34,7 @@ const LIST_COLUMNS = [
   { key: "live", label: "实时", className: "col-live", lc: 6, def: 110 },
   { key: "traffic", label: "流量", className: "col-traffic", lc: 7, def: 130 },
   { key: "net", label: "网络", className: "col-net", lc: 8, def: 100 },
-  { key: "life", label: "在线 / 到期", className: "col-life", lc: 9, def: 120 },
+  { key: "life", label: "运行", className: "col-life", lc: 9, def: 120 },
 ] as const;
 
 type ListColumn = (typeof LIST_COLUMNS)[number];
@@ -226,8 +226,6 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
     ping,
     pingBuckets,
     footerTags,
-    expire,
-    expireColor,
     uptime,
     renewalPrice,
     latencyColor,
@@ -255,7 +253,6 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
     `网络延迟 ${listPingStatus.ariaText}`,
     node.online === true ? "在线" : node.online === false ? "离线" : "状态未知",
     `运行 ${uptime.value}${uptime.unit}`,
-    `到期 ${expire.value}${expire.unit}`,
     "查看详情",
   ].join("，");
 
@@ -359,7 +356,6 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
       {!hiddenKeys.has("life") && (
         <div className="col-life node-list-stack">
           <StackLine value={uptime.value} unit={uptime.unit} color="var(--progress-cpu)" />
-          <StackLine value={expire.value} unit={expire.unit} color={expireColor} />
         </div>
       )}
     </Link>

@@ -27,7 +27,6 @@ function ctx(over: Partial<HomeSortContext> = {}): HomeSortContext {
   return {
     nameByUuid: new Map(),
     speedAvgByUuid: new Map(),
-    priceByUuid: new Map(),
     speedActive: new Set(),
     ...over,
   };
@@ -83,23 +82,6 @@ describe("sortHomeNodes", () => {
     expect(order(nodes, "traffic", "desc")).toEqual(["hi", "mid", "lo"]);
   });
 
-  it("price: priced nodes by monthly desc, then no-price by weight, then offline", () => {
-    const nodes = [
-      node({ uuid: "free", weight: 1 }),
-      node({ uuid: "cheap", weight: 5 }),
-      node({ uuid: "pricey", weight: 9 }),
-      node({ uuid: "off", online: false, weight: 0 }),
-    ];
-    const context = ctx({
-      priceByUuid: new Map<string, number | null>([
-        ["free", null],
-        ["cheap", 30],
-        ["pricey", 100],
-        ["off", 500],
-      ]),
-    });
-    expect(order(nodes, "price", "desc", context)).toEqual(["pricey", "cheap", "free", "off"]);
-  });
 
   it("speed: active set by avg desc, inactive online by weight, offline at bottom", () => {
     const nodes = [

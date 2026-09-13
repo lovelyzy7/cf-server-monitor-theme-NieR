@@ -44,7 +44,7 @@ const LIST_COLUMN_OPTIONS = [
   { key: "live", label: "实时" },
   { key: "traffic", label: "流量" },
   { key: "net", label: "网络" },
-  { key: "life", label: "在线/到期" },
+  { key: "life", label: "运行" },
 ] as const;
 
 const GRID_COLUMN_OPTIONS = [0, 1, 2, 3, 4, 5, 6] as const;

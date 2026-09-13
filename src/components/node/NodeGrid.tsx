@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
 import { useAuth } from "@/hooks/useAuth";
@@ -13,7 +12,6 @@ import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { useViewMode } from "@/hooks/useViewMode";
 import { formatBytes, formatByteRate, formatByteRateLabel } from "@/utils/format";
-import { calculateCostSummary, getExchangeRates } from "@/utils/cost";
 import { useHiddenNodeUuids } from "@/hooks/useVisibleNodes";
 import { speedRateColor } from "@/utils/metricTone";
 import {
@@ -28,7 +26,6 @@ import {
 import { getDisplayRegionCode } from "@/utils/geo";
 import { useHomeSort } from "@/hooks/useHomeSort";
 import { useHomeNodeOrder } from "@/hooks/useHomeNodeOrder";
-import { useHourlyClock } from "@/hooks/useClock";
 import { usePacedRate } from "@/hooks/usePacedRate";
 import { HomeSortControl } from "./HomeSortControl";
 import { CompactNodeCard } from "./CompactNodeCard";
@@ -45,7 +42,6 @@ const GRID_MIN_WIDTH: Record<NodeViewMode, number> = {
 };
 
 const UUID_KEY_SEPARATOR = ",";
-const EMPTY_RATES: Record<string, number> = {};
 
 
 interface HomeOverview {
@@ -207,7 +203,6 @@ function RegionTabs({
 }
 
 export function NodeGrid() {
-  const now = useHourlyClock();
   const nodes = useHomeNodeSummaries();
   const hiddenUuids = useHiddenNodeUuids();
   const allMeta = useAllNodeMeta();
@@ -261,32 +256,9 @@ export function NodeGrid() {
     [overview, pacedNet],
   );
   const showHomeOverview = themeSettings.isReady && themeSettings.showHomeOverview;
-  const hasNodes = visibleMeta.length > 0;
-  const rateQuery = useQuery({
-    queryKey: ["cost-rates", themeSettings.costRateApiUrl],
-    queryFn: ({ signal }) => getExchangeRates(themeSettings.costRateApiUrl, { signal }),
-    staleTime: 60 * 60 * 1000,
-    enabled: sortField === "price" && hasNodes,
-    retry: 1,
-  });
-  const ratesFetching = rateQuery.fetchStatus === "fetching" && !rateQuery.data;
-  const costRates = rateQuery.data?.rates ?? (ratesFetching ? null : EMPTY_RATES);
-  const costSummary = useMemo(
-    () =>
-      costRates
-        ? calculateCostSummary(visibleMeta, themeSettings.costIgnoredNodes, costRates, themeSettings.costPremiums, now)
-        : null,
-    [now, visibleMeta, themeSettings.costIgnoredNodes, themeSettings.costPremiums, costRates],
-  );
-  const priceByUuid = useMemo(() => {
-    const map = new Map<string, number | null>();
-    if (costSummary) {
-      for (const detail of costSummary.details) {
-        map.set(detail.uuid, detail.counted ? detail.monthlyCny : null);
-      }
-    }
-    return map;
-  }, [costSummary]);
+
+
+
   const groupOptions = useMemo(
     () => sortHomeGroupOptions(getHomeGroupOptions(visibleNodes), themeSettings.isReady ? themeSettings.homeGroupOrder : []),
     [visibleNodes, themeSettings.homeGroupOrder, themeSettings.isReady],
@@ -305,7 +277,6 @@ export function NodeGrid() {
     field: sortField,
     direction: sortDirection,
     nameByUuid,
-    priceByUuid,
   });
 
   useEffect(() => {

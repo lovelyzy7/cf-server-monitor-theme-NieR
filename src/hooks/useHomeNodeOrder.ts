@@ -14,12 +14,10 @@ interface Params {
   field: HomeSortField;
   direction: HomeSortDirection;
   nameByUuid: Map<string, string>;
-  priceByUuid: Map<string, number | null>;
 }
 
 const EMPTY_NUMBER_MAP = new Map<string, number>();
 const EMPTY_NAME_MAP = new Map<string, string>();
-const EMPTY_PRICE_MAP = new Map<string, number | null>();
 const EMPTY_SET = new Set<string>();
 
 export function useHomeNodeOrder({
@@ -27,7 +25,6 @@ export function useHomeNodeOrder({
   field,
   direction,
   nameByUuid,
-  priceByUuid,
 }: Params): HomeNodeSummary[] {
   const ringRef = useRef<Map<string, number[]>>(new Map());
   const nodesRef = useRef(nodes);
@@ -60,10 +57,9 @@ export function useHomeNodeOrder({
     return sortHomeNodes(nodes, field, direction, {
       nameByUuid,
       speedAvgByUuid: EMPTY_NUMBER_MAP,
-      priceByUuid,
       speedActive: EMPTY_SET,
     });
-  }, [field, direction, nodes, nameByUuid, priceByUuid]);
+  }, [field, direction, nodes, nameByUuid]);
 
   const [speedUuids, setSpeedUuids] = useState<string[]>([]);
   useEffect(() => {
@@ -86,7 +82,6 @@ export function useHomeNodeOrder({
       const ordered = sortHomeNodes(current, "speed", direction, {
         nameByUuid: EMPTY_NAME_MAP,
         speedAvgByUuid: avg,
-        priceByUuid: EMPTY_PRICE_MAP,
         speedActive: active,
       });
       const nextUuids = ordered.map((node) => node.uuid);

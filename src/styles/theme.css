@@ -57,13 +57,14 @@
  * 2. 深色模式：lunar-base token 翻转 + 监控 token
  * ------------------------------------------------------------------ */
 :root[data-appearance="dark"] {
-  /* lunar-base 基础 token（深夜模式：近黑画布与面板、更亮的米白文字，降低整体亮度） */
-  --bg-cream: #0e0d0a;
-  --bg-cream-dark: #211e17;
+  /* lunar-base 基础 token（深夜模式：近黑画布与面板、更亮的米白文字，降低整体亮度）。
+     --dark-depth 由配色选择器的「黑色程度」写入（0–100），画布/面板随深度继续加深。 */
+  --bg-cream: color-mix(in srgb, #0e0d0a, #000000 calc(var(--dark-depth, 0) * 1%));
+  --bg-cream-dark: color-mix(in srgb, #211e17, #000000 calc(var(--dark-depth, 0) * 1%));
   --fg-dark: #e6dfc9;
   --fg-mid: #968e75;
   --accent: #e6dfc9;
-  --panel: #16140f;
+  --panel: color-mix(in srgb, #16140f, #000000 calc(var(--dark-depth, 0) * 1%));
   --panel-inverse-bg: #e6dfc9;
   --panel-inverse-fg: #141310;
   --danger: #cf7160;
@@ -73,7 +74,7 @@
   --border-thin: 1px solid var(--accent);
 
   /* 监控 token */
-  --progress-bg: #232017;
+  --progress-bg: color-mix(in srgb, #232017, #000000 calc(var(--dark-depth, 0) * 1%));
   --progress-cpu: #c99a6b;
   --progress-memory: #b08a6b;
   --progress-swap: #9a9178;
@@ -102,7 +103,7 @@
 
   --tag-red-bg: #432c28;
   --tag-red-fg: #e8b4a8;
-  --tag-gray-bg: #211e17;
+  --tag-gray-bg: color-mix(in srgb, #211e17, #000000 calc(var(--dark-depth, 0) * 1%));
   --tag-gray-fg: #e6dfc9;
 
   --ring: rgba(226, 219, 196, 0.35);
@@ -3054,3 +3055,54 @@ body .metric-color-swatch input {
   .node-list-row { grid-template-columns: var(--node-list-template); }
   .col-load { display: flex; }
 }
+
+/* ====================================================================
+ * 24. 本轮修复：MINI 悬停/高度统一、顶栏视图下拉、表格列同步、Swap 栏
+ * ==================================================================== */
+
+/* MINI 悬停样式与 LARGE 同步（2px 描边 + 4px 硬阴影，深色描边米白） */
+.mini-node-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.18);
+  outline: 2px solid var(--fg-mid);
+  outline-offset: -2px;
+}
+:root[data-appearance="dark"] .mini-node-card:hover {
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55);
+  outline-color: var(--accent);
+}
+:root[data-appearance="dark"] .compact-node-card:hover {
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55);
+}
+
+/* MINI 卡片填满网格单元，大小与 LARGE/COMPACT 统一 */
+.mini-node-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.mini-node-health {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+/* 顶栏视图下拉：锚点容器 */
+.terminal-view-mode {
+  position: relative;
+}
+.terminal-view-mode .home-sort-panel {
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+}
+
+/* 表格 gauge / 延迟柱随列宽同步（去掉固定上限） */
+.node-list-gauge-track {
+  max-width: none;
+}
+.node-list-latency {
+  max-width: none;
+}
+
+/* Swap 栏（三档卡片共用） */
+.mini-node-vitals .metric-item:last-child { margin-bottom: 0; }

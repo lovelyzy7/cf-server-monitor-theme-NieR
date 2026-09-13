@@ -335,6 +335,7 @@ function CompactNodeVitals({ node, loadFraction }: { node: CompactNode; loadFrac
     <div className="compact-node-vitals">
       <CompactGauge icon={<span aria-hidden>▣</span>} label="CPU" value={formatCompactPercent(node.cpuPct)} detail={`${node.cpu_cores || 0} 核`} fraction={node.cpuPct / 100} color="var(--progress-cpu)" />
       <CompactGauge icon={<span aria-hidden>▤</span>} label="内存" value={formatCompactPercent(node.ramPct)} detail={`${formatBytes(node.ramUsed)} / ${formatBytes(node.ramTotal)}`} fraction={node.ramPct / 100} color="var(--progress-memory)" />
+      <CompactGauge icon={<span aria-hidden>▤</span>} label="Swap" value={node.swapTotal > 0 ? formatCompactPercent((node.swapUsed / node.swapTotal) * 100) : "0%"} detail={node.swapTotal > 0 ? `${formatBytes(node.swapUsed)} / ${formatBytes(node.swapTotal)}` : "未配置"} fraction={node.swapTotal > 0 ? node.swapUsed / node.swapTotal : 0} color="var(--progress-swap)" />
       <CompactGauge icon={<span aria-hidden>◫</span>} label="磁盘" value={formatCompactPercent(node.diskPct)} detail={`${formatBytes(node.diskUsed)} / ${formatBytes(node.diskTotal)}`} fraction={node.diskPct / 100} color="var(--progress-disk)" />
       <CompactGauge icon={<span aria-hidden>≋</span>} label="负载" value={node.load1.toFixed(2)} detail={`${node.load5.toFixed(2)} / ${node.load15.toFixed(2)}`} fraction={loadFraction} color="var(--progress-load)" />
     </div>

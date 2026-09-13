@@ -1,7 +1,6 @@
-import { Fragment, Suspense, lazy, useMemo, useState } from "react";
+import { Fragment, Suspense, lazy, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueries } from "@tanstack/react-query";
-import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
 import { Spinner } from "@/components/ui/Spinner";
 import { useMinuteClock } from "@/hooks/useClock";
@@ -74,8 +73,97 @@ function sortDetailValue(detail: TrafficDetail, field: TrafficSortField): number
   }
 }
 
+function toDateInputValue(ms: number): string {
+  const date = new Date(ms);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 function formatPeakTime(timeMs: number | null, value: number) {
   return timeMs != null && value > 0 ? TIME_FORMATTER.format(timeMs) : "—";
+}
+
+function TrafficSortControl({
+  field,
+  direction,
+  onSelect,
+}: {
+  field: TrafficSortField;
+  direction: TrafficSortDirection;
+  onSelect: (field: TrafficSortField) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const panelId = useId();
+  const labels: Record<TrafficSortField, string> = {
+    name: "节点",
+    total: "当日流量",
+    peakUp: "上行峰值",
+    peakDown: "下行峰值",
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div className="home-sort" ref={rootRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="home-sort-trigger"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        title={`排序：${labels[field]}（${direction === "asc" ? "升序" : "降序"}）`}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span aria-hidden>{direction === "asc" ? "↑" : "↓"}</span>
+        <span>{labels[field]}</span>
+        <span aria-hidden>▾</span>
+      </button>
+      {open && (
+        <div id={panelId} className="home-sort-panel" role="group" aria-label="排序方式">
+          {(Object.keys(labels) as TrafficSortField[]).map((option) => {
+            const active = option === field;
+            return (
+              <button
+                key={option}
+                type="button"
+                aria-current={active ? "true" : undefined}
+                data-active={active ? "true" : "false"}
+                className="home-sort-item"
+                onClick={() => {
+                  onSelect(option);
+                  setOpen(false);
+                  triggerRef.current?.focus();
+                }}
+              >
+                <span className="home-sort-item-label">{labels[option]}</span>
+                {active && <span aria-hidden>{direction === "asc" ? "↑" : "↓"}</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function PeakValue({ value, timeMs }: { value: number; timeMs: number | null }) {
@@ -133,7 +221,7 @@ function TrafficSampleChart({ id, samples }: { id: string; samples: TodayTraffic
 
 export function Traffic() {
   const [expandedUuid, setExpandedUuid] = useState<string | null>(null);
-  const [dayOffset, setDayOffset] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [sortField, setSortField] = useState<TrafficSortField>("total");
   const [sortDirection, setSortDirection] = useState<TrafficSortDirection>("desc");
   const now = useMinuteClock();
@@ -144,9 +232,15 @@ export function Traffic() {
   const uuids = useMemo(() => nodes.map((node) => node.uuid), [nodes]);
   // 未登录访客查不了超过 24 小时的历史，往期只给登录用户。
   const maxDayOffset = me?.logged_in ? 6 : 0;
-  const effectiveOffset = Math.min(dayOffset, maxDayOffset);
+  const todayStartMs = localDayStart(now);
+  // 往期记录通过日历选择：解析选中日期，越界（未来/超出上限）时收敛到允许范围。
+  const selectedStartMs = selectedDate ? new Date(`${selectedDate}T00:00:00`).getTime() : todayStartMs;
+  const rawOffset = Number.isFinite(selectedStartMs)
+    ? Math.round((todayStartMs - selectedStartMs) / DAY_MS)
+    : 0;
+  const effectiveOffset = Math.max(0, Math.min(rawOffset, maxDayOffset));
 
-  const dayStartMs = localDayStart(now) - effectiveOffset * DAY_MS;
+  const dayStartMs = todayStartMs - effectiveOffset * DAY_MS;
   const dayEndMs = dayStartMs + DAY_MS;
 
   const todayQuery = useTodayTrafficStats(uuids, now);
@@ -229,26 +323,26 @@ export function Traffic() {
     <div>
       <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
         <Link className="button" to="/">{t("common.back")}</Link>
-        <button type="button" onClick={refetch} disabled={isFetching || nodes.length === 0} aria-busy={isFetching} title={t("common.refresh")}>
-          ⟳ {t("common.refresh")}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-mid)" }}>
+            日期
+            <input
+              type="date"
+              value={toDateInputValue(dayStartMs)}
+              min={toDateInputValue(todayStartMs - maxDayOffset * DAY_MS)}
+              max={toDateInputValue(todayStartMs)}
+              onChange={(e) => setSelectedDate(e.target.value || null)}
+              style={{ fontFamily: "var(--font-mono)", fontSize: 12, background: "var(--bg-cream)", border: "var(--border-thin)", color: "var(--fg-dark)", padding: "4px 8px" }}
+            />
+          </label>
+          <TrafficSortControl field={sortField} direction={sortDirection} onSelect={handleSort} />
+          <button type="button" onClick={refetch} disabled={isFetching || nodes.length === 0} aria-busy={isFetching} title={t("common.refresh")}>
+            ⟳ {t("common.refresh")}
+          </button>
+        </div>
       </div>
 
       <h1 className="bracket-header">{t("title.traffic")}</h1>
-
-      <div className="tab-bar" style={{ marginTop: 8 }}>
-        {Array.from({ length: maxDayOffset + 1 }, (_, offset) => (
-          <button
-            key={offset}
-            type="button"
-            className={clsx("tab-btn", effectiveOffset === offset && "active")}
-            aria-pressed={effectiveOffset === offset}
-            onClick={() => setDayOffset(offset)}
-          >
-            {offset === 0 ? "今天" : offset === 1 ? "昨天" : `${offset} 天前`}
-          </button>
-        ))}
-      </div>
 
       {nodes.length === 0 ? (
         <div className="center-box" style={{ minHeight: "40vh" }}>

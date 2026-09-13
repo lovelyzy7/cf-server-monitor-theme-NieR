@@ -103,6 +103,7 @@ function MiniVitals({ node, loadFraction }: { node: MiniNode; loadFraction: numb
     <div className="mini-node-vitals">
       <MiniMetricBar icon={<span aria-hidden>▣</span>} label="CPU" valueText={node.cpuPct.toFixed(node.cpuPct >= 10 ? 0 : 1)} unit="%" fraction={node.cpuPct / 100} paint="var(--progress-cpu)" />
       <MiniMetricBar icon={<span aria-hidden>▤</span>} label="内存" valueText={node.ramPct.toFixed(node.ramPct >= 10 ? 0 : 1)} unit="%" fraction={node.ramPct / 100} paint="var(--progress-memory)" />
+      <MiniMetricBar icon={<span aria-hidden>▤</span>} label="Swap" valueText={node.swapTotal > 0 ? ((node.swapUsed / node.swapTotal) * 100).toFixed(node.swapUsed / node.swapTotal >= 10 ? 0 : 1) : "0"} unit={node.swapTotal > 0 ? "%" : undefined} fraction={node.swapTotal > 0 ? node.swapUsed / node.swapTotal : 0} paint="var(--progress-swap)" />
       <MiniMetricBar icon={<span aria-hidden>◫</span>} label="磁盘" valueText={node.diskPct.toFixed(node.diskPct >= 10 ? 0 : 1)} unit="%" fraction={node.diskPct / 100} paint="var(--progress-disk)" />
       <MiniMetricBar icon={<span aria-hidden>≋</span>} label="负载" valueText={node.load1.toFixed(2)} fraction={loadFraction} paint="var(--progress-load)" />
     </div>

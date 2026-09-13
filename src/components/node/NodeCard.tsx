@@ -55,7 +55,6 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
   const m = model as FullCardModel;
   const merged = m.node;
   const online = merged.online === true ? true : merged.online === false ? false : null;
-  const expiry = m.expire;
   const uptime = m.uptime;
 
   return (
@@ -81,6 +80,8 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
         <MetricBar label="CPU" percent={merged?.cpuPct ?? 0} colorVar="--progress-cpu" />
         <MetricBar label="MEM" percent={merged?.ramPct ?? 0} colorVar="--progress-memory"
           valueText={merged ? `${formatBytes(merged.ramUsed)} / ${formatBytes(merged.ramTotal)}` : undefined} />
+        <MetricBar label="SWAP" percent={merged && merged.swapTotal > 0 ? (merged.swapUsed / merged.swapTotal) * 100 : 0} colorVar="--progress-swap"
+          valueText={merged && merged.swapTotal > 0 ? `${formatBytes(merged.swapUsed)} / ${formatBytes(merged.swapTotal)}` : undefined} />
         <MetricBar label="DISK" percent={merged?.diskPct ?? 0} colorVar="--progress-disk" />
       </div>
 
@@ -157,8 +158,6 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
             <dd>{uptime.value} {uptime.unit}</dd>
           </>
         )}
-        <dt>{t("card.expire")}</dt>
-        <dd style={{ color: m.expireColor }}>{expiry.value}{expiry.unit}</dd>
       </dl>
     </Link>
   );
