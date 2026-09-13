@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { BackgroundLayer } from "./BackgroundLayer";
 import { TerminalBar } from "./TerminalBar";
 import { TurnstileGate } from "./TurnstileGate";
@@ -13,6 +14,7 @@ import { useMetricColorsSync } from "@/hooks/useMetricColors";
 import { useNodeStoreStatus } from "@/hooks/useNode";
 import { usePingHistoryRefresh } from "@/hooks/usePingHistoryRefresh";
 import { getAdminUrl } from "@/services/cfsm/config";
+import { clearHistoryCache } from "@/services/api";
 import { Spinner } from "@/components/ui/Spinner";
 
 export function AppShell() {
@@ -23,21 +25,28 @@ export function AppShell() {
   const publicConfig = usePublicConfig();
   const auth = useAuth();
   const pingRefresh = usePingHistoryRefresh();
+  const queryClient = useQueryClient();
   const normalizedPath = (pathname.replace(/\/+$/, "") || "/").toLowerCase();
   // 切换页面回到顶部（hash 路由不会自动滚动）。
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [normalizedPath, search]);
-  // 浏览器前进/后退从 bfcache 恢复时不保留旧状态：强制整页刷新，重新拉数据与实时连接。
+  // 浏览器前进/后退：软刷新——清空查询缓存并回顶，不整页重载。
+  // 整页 reload 会误伤正常导航（某些浏览器/环境对同文档 hash 导航也发 popstate，
+  // 导致第一次打开详情页闪动刷新）。
   useEffect(() => {
     const onPageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
-        window.location.reload();
+        // bfcache 恢复：软刷新即可重新拉取数据。
+        queryClient.clear();
+        clearHistoryCache();
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
       }
     };
-    // 哈希路由下前进/后退只改 hash、页面不会重载：同样强制刷新，不保留旧状态。
     const onPopState = () => {
-      window.location.reload();
+      queryClient.clear();
+      clearHistoryCache();
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     };
     window.addEventListener("pageshow", onPageShow);
     window.addEventListener("popstate", onPopState);
@@ -45,7 +54,7 @@ export function AppShell() {
       window.removeEventListener("pageshow", onPageShow);
       window.removeEventListener("popstate", onPopState);
     };
-  }, []);
+  }, [queryClient]);
   const isDataRoute =
     normalizedPath === "/" ||
     normalizedPath === "/traffic" ||
