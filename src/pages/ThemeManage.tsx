@@ -40,17 +40,30 @@ function pickDraft(s: ResolvedThemeSettings) {
     defaultAppearance: s.defaultAppearance,
     desktopNodeViewMode: s.desktopNodeViewMode,
     mobileNodeViewMode: s.mobileNodeViewMode,
+    enableAdminButton: s.enableAdminButton,
+    showPingChart: s.showPingChart,
     enableHomepageMultiPing: s.enableHomepageMultiPing,
     homepageDefaultPingTaskId: s.homepageDefaultPingTaskId,
+    fakePingForUnbound: s.fakePingForUnbound,
     showHomeOverview: s.showHomeOverview,
     showGroupTabs: s.showGroupTabs,
     showRegionBar: s.showRegionBar,
     showCardGroup: s.showCardGroup,
     showCardPrice: s.showCardPrice,
+    showOverviewRatings: s.showOverviewRatings,
+    showTrafficRating: s.showTrafficRating,
+    showBandwidthRating: s.showBandwidthRating,
+    showAssetRating: s.showAssetRating,
+    compactShowTrafficTotal: s.compactShowTrafficTotal,
+    compactShowBilling: s.compactShowBilling,
+    compactShowUptime: s.compactShowUptime,
+    showConnections: s.showConnections,
     showCostSummary: s.showCostSummary,
     showCostSummaryFloatingButton: s.showCostSummaryFloatingButton,
     costRateApiUrl: s.costRateApiUrl,
     costIgnoredNodes: s.costIgnoredNodes,
+    hiddenNodes: s.hiddenNodes,
+    surfaceOpacity: s.surfaceOpacity,
   };
 }
 type Draft = ReturnType<typeof pickDraft>;
@@ -114,6 +127,7 @@ export function ThemeManage() {
   const draftThemeSettings = useMemo<ThemeSettings>(() => ({
     ...draft,
     costIgnoredNodes: normalizeCostIgnoredNodes(draft.costIgnoredNodes),
+    hiddenNodes: normalizeCostIgnoredNodes(draft.hiddenNodes),
     costRateApiUrl: normalizeCostRateApiUrl(draft.costRateApiUrl),
   }), [draft]);
 
@@ -191,10 +205,14 @@ export function ThemeManage() {
     setError(null);
   };
 
-  // 忽略节点草稿用文本域编辑，提交时归一化回数组。
+  // 忽略节点 / 隐藏节点草稿用文本域编辑，提交时归一化回数组。
   const [ignoredText, setIgnoredText] = useState(() => sourceSettings.costIgnoredNodes.join("\n"));
+  const [hiddenText, setHiddenText] = useState(() => sourceSettings.hiddenNodes.join("\n"));
   useEffect(() => {
-    if (!isDirty) setIgnoredText(sourceSettings.costIgnoredNodes.join("\n"));
+    if (!isDirty) {
+      setIgnoredText(sourceSettings.costIgnoredNodes.join("\n"));
+      setHiddenText(sourceSettings.hiddenNodes.join("\n"));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceSignature]);
 
@@ -275,11 +293,24 @@ export function ThemeManage() {
         <ToggleRow label="显示地区统计" desc="按地区聚合" checked={draft.showRegionBar} onPatch={(v) => patch("showRegionBar", v)} />
         <ToggleRow label="卡片显示分组" checked={draft.showCardGroup} onPatch={(v) => patch("showCardGroup", v)} />
         <ToggleRow label="卡片显示价格" checked={draft.showCardPrice} onPatch={(v) => patch("showCardPrice", v)} />
+        <ToggleRow label="总览评级" desc="流量/带宽/资产概览的评级标签" checked={draft.showOverviewRatings} onPatch={(v) => patch("showOverviewRatings", v)} />
+        <ToggleRow label="流量评级" checked={draft.showTrafficRating} onPatch={(v) => patch("showTrafficRating", v)} />
+        <ToggleRow label="带宽评级" checked={draft.showBandwidthRating} onPatch={(v) => patch("showBandwidthRating", v)} />
+        <ToggleRow label="资产评级" checked={draft.showAssetRating} onPatch={(v) => patch("showAssetRating", v)} />
+      </div>
+
+      <div className="panel panel-corners" style={{ marginTop: 16 }}>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>小卡片与列表</h2>
+        <ToggleRow label="小卡显示累计流量" checked={draft.compactShowTrafficTotal} onPatch={(v) => patch("compactShowTrafficTotal", v)} />
+        <ToggleRow label="小卡显示费用到期" checked={draft.compactShowBilling} onPatch={(v) => patch("compactShowBilling", v)} />
+        <ToggleRow label="小卡显示在线时长" checked={draft.compactShowUptime} onPatch={(v) => patch("compactShowUptime", v)} />
+        <ToggleRow label="显示连接数" desc="TCP/UDP（需探针上报）" checked={draft.showConnections} onPatch={(v) => patch("showConnections", v)} />
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
         <h2 className="bracket-header" style={{ fontSize: 14 }}>延迟线路</h2>
         <ToggleRow label="多线路模式" desc="大/小卡片显示多条线路对比；关闭后单线路" checked={draft.enableHomepageMultiPing} onPatch={(v) => patch("enableHomepageMultiPing", v)} />
+        <ToggleRow label="未绑定节点模拟数据" desc="访客看到的模拟延迟由站长显式开启" checked={draft.fakePingForUnbound} onPatch={(v) => patch("fakePingForUnbound", v)} />
         <div style={{ marginTop: 8 }}>
           <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>默认线路</span>
           <div className="tab-bar">
@@ -307,6 +338,33 @@ export function ThemeManage() {
             onChange={(e) => { setIgnoredText(e.target.value); patch("costIgnoredNodes", normalizeCostIgnoredNodes(e.target.value.split("\n"))); }}
             rows={4}
             style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: 12, background: "var(--bg-cream)", border: "var(--border-thin)", color: "var(--fg-dark)", padding: "8px 10px" }}
+          />
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <label style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>隐藏节点（每行一个名称或 UUID）</label>
+          <textarea
+            value={hiddenText}
+            onChange={(e) => { setHiddenText(e.target.value); patch("hiddenNodes", normalizeCostIgnoredNodes(e.target.value.split("\n"))); }}
+            rows={3}
+            style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: 12, background: "var(--bg-cream)", border: "var(--border-thin)", color: "var(--fg-dark)", padding: "8px 10px" }}
+          />
+        </div>
+      </div>
+
+      <div className="panel panel-corners" style={{ marginTop: 16 }}>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>其他</h2>
+        <ToggleRow label="显示管理后台入口" desc="顶栏 ADMIN 按钮" checked={draft.enableAdminButton} onPatch={(v) => patch("enableAdminButton", v)} />
+        <ToggleRow label="详情页显示 Ping 图表" checked={draft.showPingChart} onPatch={(v) => patch("showPingChart", v)} />
+        <div style={{ marginTop: 12 }}>
+          <label style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>卡片不透明度（{draft.surfaceOpacity}%）</label>
+          <input
+            type="range"
+            min="40"
+            max="100"
+            step="1"
+            value={draft.surfaceOpacity}
+            onChange={(e) => patch("surfaceOpacity", Number(e.target.value))}
+            style={{ width: "100%", accentColor: "var(--accent)" }}
           />
         </div>
       </div>

@@ -6,6 +6,7 @@ import { OsLogo } from "@/components/ui/OsLogo";
 import { MetricBar } from "@/components/node/MetricBar";
 import { LoadChart } from "@/components/instance/LoadChart";
 import { PingChart } from "@/components/instance/PingChart";
+import { InstanceSwitcher } from "@/components/instance/InstanceSwitcher";
 import {
   buildLoadTimeRangeOptions,
   buildPingTimeRangeOptions,
@@ -99,8 +100,9 @@ export function Instance() {
 
   return (
     <div>
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
         <Link className="instance-page-back" to="/">{t("common.back")}</Link>
+        <InstanceSwitcher currentUuid={uuid} />
       </div>
 
       <h1 className="bracket-header">

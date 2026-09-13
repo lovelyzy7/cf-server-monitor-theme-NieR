@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useNodeCardModel } from "@/hooks/useNodeCardModel";
+import { useNodeMeta } from "@/hooks/useNode";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Flag } from "@/components/ui/Flag";
 import { OsLogo } from "@/components/ui/OsLogo";
@@ -21,6 +22,13 @@ function StatusPill({ online }: { online: boolean | null }) {
 export function NodeCardHost({ node }: { node: NodeInfo }) {
   const model = useNodeCardModel(node.uuid);
   return <NodeCard node={node} model={model} />;
+}
+
+/** 供 NodeGrid 使用的 uuid 版入口。 */
+export function NodeCardUuid({ uuid }: { uuid: string }) {
+  const node = useNodeMeta(uuid);
+  if (!node) return null;
+  return <NodeCardHost node={node} />;
 }
 
 type CardModel = ReturnType<typeof useNodeCardModel>;

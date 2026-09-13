@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { lazy, Suspense, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { usePreferences } from "@/hooks/usePreferences";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
@@ -6,6 +7,7 @@ import { useViewMode } from "@/hooks/useViewMode";
 import { useHomeNodeSummaries, useNodeStoreStatus } from "@/hooks/useNode";
 import { type PingHistoryRefreshState } from "@/hooks/usePingHistoryRefresh";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { getAdminUrl } from "@/services/cfsm/config";
 import { clsx } from "clsx";
 import type { Appearance } from "@/utils/themeSettings";
@@ -39,11 +41,15 @@ function buildRefreshTitle(state: PingHistoryRefreshState): string {
   return `${base}\n上次刷新 ${at}`;
 }
 
+const MetricColorPicker = lazy(() =>
+  import("@/components/shell/MetricColorPicker").then((module) => ({ default: module.MetricColorPicker })),
+);
+
 /**
  * 顶部「Bunker Terminal」状态栏 + 主导航。
  *
  * 左侧：YoRHa · Bunker Terminal · 站点标题 + 在线读数。
- * 右侧：外观 / 视图 / 刷新延迟 / 主题设置 / 后台，终端胶囊按钮。
+ * 右侧：外观 / 视图 / 配色 / 刷新延迟 / 主题设置 / 后台，终端胶囊按钮。
  */
 export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshState }) {
   const { data: config } = usePublicConfig();
@@ -51,6 +57,10 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
   const { appearance, setAppearance } = usePreferences();
   const { mode, nextMode, toggleMode } = useViewMode();
   const { lang, setLang, t } = useLanguage();
+  const themeSettings = useThemeSettings();
+  const showAdmin = themeSettings.isReady && themeSettings.enableAdminButton;
+  const [colorsOpen, setColorsOpen] = useState(false);
+  const [colorsMounted, setColorsMounted] = useState(false);
   const summaries = useHomeNodeSummaries();
   const storeStatus = useNodeStoreStatus();
   const location = useLocation();
@@ -113,16 +123,30 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           >
             {viewLabel}
           </button>
+          <button
+            type="button"
+            className="control-button"
+            aria-pressed={colorsOpen}
+            title="卡片配色"
+            onClick={() => {
+              setColorsMounted(true);
+              setColorsOpen((value) => !value);
+            }}
+          >
+            COLORS
+          </button>
           <Link to="/?view=theme-manage" className="control-button" title="主题设置">
             SETTINGS
           </Link>
-          <a
-            href={getAdminUrl()}
-            className="control-button"
-            title={me?.logged_in ? "管理后台" : "后台登录"}
-          >
-            ADMIN
-          </a>
+          {showAdmin && (
+            <a
+              href={getAdminUrl()}
+              className="control-button"
+              title={me?.logged_in ? "管理后台" : "后台登录"}
+            >
+              ADMIN
+            </a>
+          )}
           <button
             type="button"
             className="lang-toggle"
@@ -139,6 +163,13 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
         {navLink("/assets", t("nav.assets"))}
         {navLink("/traffic", t("nav.traffic"))}
       </nav>
+      {colorsMounted && (
+        <Suspense fallback={null}>
+          <div className="terminal-bar-picker">
+            <MetricColorPicker hidden={!colorsOpen} />
+          </div>
+        </Suspense>
+      )}
     </div>
   );
 }
