@@ -302,17 +302,17 @@ export function NodeListView({ uuids }: { uuids: string[] }) {
   return (
     <div className="node-list-scroll">
       <div className="node-list">
-        <div className="node-list-head" aria-hidden>
-          <div>节点</div>
-          <div>系统</div>
-          <div>CPU</div>
-          <div>内存</div>
-          <div>磁盘</div>
-          <div>负载</div>
-          <div>实时</div>
-          <div>流量</div>
-          <div>网络</div>
-          <div>在线 / 到期</div>
+        <div className="node-list-row node-list-head" aria-hidden>
+          <div className="node-list-cell">节点</div>
+          <div className="node-list-cell col-os">系统</div>
+          <div className="node-list-cell col-metric">CPU</div>
+          <div className="node-list-cell col-metric">内存</div>
+          <div className="node-list-cell col-metric">磁盘</div>
+          <div className="node-list-cell col-load">负载</div>
+          <div className="node-list-cell col-live">实时</div>
+          <div className="node-list-cell col-traffic">流量</div>
+          <div className="node-list-cell col-net">网络</div>
+          <div className="node-list-cell col-life">在线 / 到期</div>
         </div>
         {uuids.map((uuid) => (
           <NodeRow key={uuid} uuid={uuid} />

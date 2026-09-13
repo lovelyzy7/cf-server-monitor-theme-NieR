@@ -57,88 +57,97 @@
  * 2. 深色模式：lunar-base token 翻转 + 监控 token
  * ------------------------------------------------------------------ */
 :root[data-appearance="dark"] {
-  /* lunar-base 基础 token（深夜模式：更深一档的画布与面板，米白文字不变） */
-  --bg-cream: #1d1b16;
-  --bg-cream-dark: #38342b;
-  --fg-dark: #d8d1bb;
-  --fg-mid: #8f8871;
-  --accent: #d8d1bb;
-  --panel: #292621;
-  --panel-inverse-bg: #d8d1bb;
-  --panel-inverse-fg: #1a1814;
-  --danger: #c96a5a;
-  --danger-hover: #e08a7a;
-  --success: #7a9a5b;
+  /* lunar-base 基础 token（深夜模式：近黑画布与面板、更亮的米白文字，降低整体亮度） */
+  --bg-cream: #12110e;
+  --bg-cream-dark: #26221b;
+  --fg-dark: #e2dbc4;
+  --fg-mid: #968e75;
+  --accent: #e2dbc4;
+  --panel: #1e1b16;
+  --panel-inverse-bg: #e2dbc4;
+  --panel-inverse-fg: #141310;
+  --danger: #cf7160;
+  --danger-hover: #e28773;
+  --success: #86a762;
   --border-thick: 2px solid var(--accent);
   --border-thin: 1px solid var(--accent);
 
   /* 监控 token */
-  --progress-bg: #3a362c;
+  --progress-bg: #2a261e;
   --progress-cpu: #c99a6b;
   --progress-memory: #b08a6b;
   --progress-swap: #9a9178;
-  --progress-disk: #c96a5a;
-  --progress-network: #7a9a5b;
-  --progress-load: #b8b099;
+  --progress-disk: #cf7160;
+  --progress-network: #86a762;
+  --progress-load: #c0b896;
 
-  --latency-excellent: #7a9a5b;
-  --latency-good: #b8b05a;
-  --latency-moderate: #c9a24a;
-  --latency-elevated: #c98a4a;
-  --latency-critical: #c96a5a;
+  --latency-excellent: #86a762;
+  --latency-good: #c2b95e;
+  --latency-moderate: #d2ab4e;
+  --latency-elevated: #d2924e;
+  --latency-critical: #cf7160;
 
-  --speed-idle: #7a9a5b;
-  --speed-low: #c9a24a;
-  --speed-high: #c98a4a;
-  --speed-max: #c96a5a;
+  --speed-idle: #86a762;
+  --speed-low: #d2ab4e;
+  --speed-high: #d2924e;
+  --speed-max: #cf7160;
 
-  --traffic-up: #d8d1bb;
+  --traffic-up: #e2dbc4;
   --traffic-down: #b8b099;
 
-  --status-warning: #c9a24a;
+  --status-warning: #d2ab4e;
   --status-info: #b8b099;
-  --status-online: #7a9a5b;
-  --status-offline: #c96a5a;
+  --status-online: #86a762;
+  --status-offline: #cf7160;
 
-  --tag-red-bg: #4a3330;
-  --tag-red-fg: #e0b0a8;
-  --tag-gray-bg: #3a362c;
-  --tag-gray-fg: #d8d1bb;
+  --tag-red-bg: #432c28;
+  --tag-red-fg: #e8b4a8;
+  --tag-gray-bg: #26221b;
+  --tag-gray-fg: #e2dbc4;
 
-  --ring: rgba(216, 209, 187, 0.35);
+  --ring: rgba(226, 219, 196, 0.35);
 }
 
-/* 深色下顶栏 / 主导航固定保持炭黑，不从 --accent（已翻成米白）取色。 */
+/* 深色下顶栏 / 主导航固定保持近黑，不从 --accent（已翻成米白）取色；文字用更亮的米白保证清晰。 */
 :root[data-appearance="dark"] .terminal-bar {
-  background: #16150f;
-  color: #d8d1bb;
+  background: #0b0a08;
+  color: #e2dbc4;
 }
 :root[data-appearance="dark"] .terminal-bar .right {
-  color: #8f8871;
+  color: #968e75;
 }
 :root[data-appearance="dark"] .terminal-bar .right .user-pill,
 :root[data-appearance="dark"] .terminal-bar .right .user-pill a {
-  color: #d8d1bb;
+  color: #e2dbc4;
+}
+:root[data-appearance="dark"] .terminal-bar .control-button {
+  color: #e2dbc4;
+  border-color: #968e75;
+}
+:root[data-appearance="dark"] .terminal-bar .control-button:hover,
+:root[data-appearance="dark"] .terminal-bar .control-button.is-active {
+  background: #e2dbc4;
+  color: #0b0a08;
 }
 :root[data-appearance="dark"] .lang-toggle {
-  color: #d8d1bb;
-  border-color: #8f8871;
+  color: #e2dbc4;
+  border-color: #968e75;
 }
 :root[data-appearance="dark"] .lang-toggle:hover {
-  background: #d8d1bb;
-  color: #16150f;
+  background: #e2dbc4;
+  color: #0b0a08;
 }
 :root[data-appearance="dark"] nav.primary {
-  background: #16150f;
-  border-bottom: 4px double #d8d1bb;
+  background: #0b0a08;
+  border-bottom: 4px double #e2dbc4;
 }
 :root[data-appearance="dark"] nav.primary a {
-  color: #d8d1bb;
+  color: #e2dbc4;
 }
 :root[data-appearance="dark"] nav.primary a:hover,
 :root[data-appearance="dark"] nav.primary a.active {
-  background: #d8d1bb;
-  color: #16150f;
+  background: #e2dbc4;
+  color: #0b0a08;
 }
 
 /* ------------------------------------------------------------------ *
@@ -1591,7 +1600,14 @@ a:focus-visible {
 .overview-block.is-offline { background: var(--status-offline); }
 
 /* ---- 17.2 分组页签 / 地区栏 ---- */
-.home-controls-bar { margin-bottom: 12px; }
+.home-controls-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
 .home-group-tabs {
   display: flex;
   gap: 4px;
@@ -1644,7 +1660,7 @@ a:focus-visible {
 }
 
 /* ---- 17.3 排序控件 ---- */
-.home-sort { position: relative; margin-left: auto; }
+.home-sort { position: relative; }
 .home-sort-trigger {
   display: inline-flex;
   align-items: center;
@@ -1881,9 +1897,10 @@ a:focus-visible {
   text-transform: uppercase;
   color: var(--fg-dark);
   border-bottom: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* 长名称换行显示，不超出卡片边框 */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .compact-node-actions { display: flex; align-items: center; gap: 6px; }
 .compact-node-detail-link { border-bottom: none; }
@@ -2557,3 +2574,143 @@ a:focus-visible {
   margin-top: 6px;
 }
 .top-sticky { position: sticky; top: 0; z-index: 50; }
+
+/* ====================================================================
+ * 18. 列表视图修复（覆盖 17.8：对齐 LuminaPlus 的 flex 网格结构）
+ * ==================================================================== */
+.node-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 1120px;
+  border: var(--border-thick);
+  background: var(--panel);
+}
+.node-list-row {
+  grid-template-columns:
+    minmax(196px, 2.4fr)
+    minmax(116px, 1.1fr)
+    minmax(82px, 1fr)
+    minmax(82px, 1fr)
+    minmax(82px, 1fr)
+    minmax(72px, 0.78fr)
+    minmax(94px, 1fr)
+    minmax(110px, 1.15fr)
+    minmax(82px, 0.9fr)
+    minmax(102px, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 52px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--bg-cream-dark);
+  background: transparent;
+}
+.node-list-row.node-list-head {
+  min-height: 36px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: var(--bg-cream-dark);
+  color: var(--fg-mid);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom: var(--border-thin);
+}
+.node-list-row:last-child { border-bottom: 0; }
+.node-list-row:not(.node-list-head):hover { background: var(--bg-cream-dark); }
+.node-list-cell { min-width: 0; }
+
+/* 指标/堆叠/网络列居中，与格内内容对齐 */
+.col-metric,
+.col-load,
+.col-live,
+.col-net,
+.col-life {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.node-list-node {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  text-align: left;
+}
+.col-os {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  text-align: left;
+}
+.node-list-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+.node-list-gauge-track {
+  width: 100%;
+  max-width: 120px;
+}
+.node-list-latency {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  max-width: 132px;
+}
+/* 流量列：↑↓ 两行在左，配额% 并排右侧，竖直居中 */
+.col-traffic {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.node-list-traffic-quota {
+  position: static;
+  transform: none;
+  flex: 0 0 auto;
+}
+
+/* 桌面变窄时按优先级隐藏 网络 → 负载，并同步收缩列模板避免空轨道错位 */
+@media (max-width: 1180px) {
+  .node-list { min-width: 1020px; }
+  .node-list-row {
+    grid-template-columns:
+      minmax(190px, 2.4fr)
+      minmax(116px, 1.1fr)
+      minmax(82px, 1fr)
+      minmax(82px, 1fr)
+      minmax(82px, 1fr)
+      minmax(72px, 0.78fr)
+      minmax(94px, 1fr)
+      minmax(110px, 1.15fr)
+      minmax(102px, 1fr);
+  }
+  .col-net { display: none; }
+}
+@media (max-width: 1000px) {
+  .node-list { min-width: 900px; }
+  .node-list-row {
+    grid-template-columns:
+      minmax(184px, 2.4fr)
+      minmax(110px, 1.1fr)
+      minmax(80px, 1fr)
+      minmax(80px, 1fr)
+      minmax(80px, 1fr)
+      minmax(94px, 1fr)
+      minmax(108px, 1.15fr)
+      minmax(100px, 1fr);
+  }
+  .col-load { display: none; }
+}

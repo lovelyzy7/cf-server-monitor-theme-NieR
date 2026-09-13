@@ -46,7 +46,7 @@
         document.documentElement.dataset.appearance = resolved;
         document.documentElement.style.colorScheme = resolved;
         const meta = document.querySelector('meta[name="theme-color"]');
-        if (meta) meta.content = resolved === "dark" ? "#1d1b16" : "#cfc7b0";
+        if (meta) meta.content = resolved === "dark" ? "#12110e" : "#cfc7b0";
 
         try {
           const rawDepth = localStorage.getItem("cfsm-nier:dark-depth");
