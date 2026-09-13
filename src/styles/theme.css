@@ -3597,3 +3597,43 @@ body .metric-color-swatch input {
   .terminal-bar .right .terminal-btn-admin { order: 7; }
   .terminal-bar .right .user-pill { order: 8; }
 }
+
+/* ====================================================================
+ * 34. 性能与移动端详情页打磨
+ * ==================================================================== */
+
+/* 大列表渲染提速：屏幕外卡片跳过布局/绘制（保留占位高度，滚动稳定） */
+.node-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+.compact-node-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 300px;
+}
+.mini-node-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
+/* 移动端：实例详情页每个块无横向纵向滚动条 */
+@media (max-width: 720px) {
+  .instance-page .panel,
+  .instance-page .panel-corners {
+    overflow: visible !important;
+    scrollbar-width: none !important;
+    min-width: 0;
+  }
+  .instance-page *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+  .instance-page .instance-chart-grid {
+    grid-template-columns: 1fr;
+  }
+  .instance-page .kv dd {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}

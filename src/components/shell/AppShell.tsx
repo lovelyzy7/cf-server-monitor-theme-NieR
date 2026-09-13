@@ -35,8 +35,16 @@ export function AppShell() {
         window.location.reload();
       }
     };
+    // 哈希路由下前进/后退只改 hash、页面不会重载：同样强制刷新，不保留旧状态。
+    const onPopState = () => {
+      window.location.reload();
+    };
     window.addEventListener("pageshow", onPageShow);
-    return () => window.removeEventListener("pageshow", onPageShow);
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("popstate", onPopState);
+    };
   }, []);
   const isDataRoute =
     normalizedPath === "/" ||

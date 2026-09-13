@@ -99,7 +99,7 @@ export function Instance() {
   const online = metrics?.online;
 
   return (
-    <div>
+    <div className="instance-page">
       <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
         <Link className="instance-page-back" to="/">{t("common.back")}</Link>
         <InstanceSwitcher currentUuid={uuid} />
