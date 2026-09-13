@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import UplotReact from "uplot-react";
 import type uPlot from "uplot";
-import "uplot/dist/uPlot.min.css";
 import { ChartTooltip } from "@/components/instance/ChartParts";
 import {
   buildChartTooltipHooks,

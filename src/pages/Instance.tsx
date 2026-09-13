@@ -1,6 +1,5 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import "uplot/dist/uPlot.min.css";
 import { Flag } from "@/components/ui/Flag";
 import { OsLogo } from "@/components/ui/OsLogo";
 import { MetricBar } from "@/components/node/MetricBar";

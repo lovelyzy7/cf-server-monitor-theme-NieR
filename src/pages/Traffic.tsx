@@ -1,4 +1,4 @@
-import { Fragment, lazy, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Fragment, lazy, Suspense, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
@@ -312,7 +312,9 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
           该时间范围内暂无采样数据
         </div>
       ) : (
-        <TrafficRateChart samples={samples} live={live} />
+        <Suspense fallback={<div style={{ padding: "20px 0", textAlign: "center" }}><Spinner size={18} /></div>}>
+          <TrafficRateChart samples={samples} live={live} />
+        </Suspense>
       )}
     </section>
   );
@@ -321,7 +323,7 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
 function TrafficDetailToggle({ expanded, onClick }: { expanded: boolean; controlsId: string; onClick: () => void }) {
   return (
     <button type="button" aria-expanded={expanded} onClick={onClick}>
-      详情 <span aria-hidden>▾</span>
+      详情 <span aria-hidden>{expanded ? "▼" : "◀"}</span>
     </button>
   );
 }
@@ -332,6 +334,19 @@ export function Traffic() {
   const [sortField, setSortField] = useState<TrafficSortField>("total");
   const [sortDirection, setSortDirection] = useState<TrafficSortDirection>("desc");
   const now = useMinuteClock();
+  // 空闲预取节点图分块：首次点「详情」只显示图表区域加载，不因下载代码而整页闪动。
+  useEffect(() => {
+    const idle: (cb: () => void, opts?: { timeout: number }) => number =
+      (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback ??
+      ((cb) => window.setTimeout(cb, 1500));
+    const cancel: (handle: number) => void =
+      (window as Window & { cancelIdleCallback?: (handle: number) => void }).cancelIdleCallback ??
+      ((handle) => window.clearTimeout(handle));
+    const handle = idle(() => {
+      void import("@/components/traffic/TrafficRateChart");
+    }, { timeout: 2000 });
+    return () => cancel(handle);
+  }, []);
   const { t } = useLanguage();
   const { data: me } = useAuth();
   const isMobileLayout = useMediaQuery(TRAFFIC_MOBILE_QUERY);

@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import "uplot/dist/uPlot.min.css";
 import "./styles/automata.css";
 import "./styles/theme.css";
 import { App } from "./App";
