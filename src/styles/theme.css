@@ -3637,3 +3637,45 @@ body .metric-color-swatch input {
     word-break: break-word;
   }
 }
+
+/* ====================================================================
+ * 35. NieR 日期输入框 + 节点图范围控件
+ * ==================================================================== */
+.nie-date-input {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-cream);
+  border: var(--border-thin);
+  color: var(--fg-dark);
+  padding: 4px 8px;
+  cursor: var(--cur-pointer);
+}
+.nie-date-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.node-chart-ranges {
+  margin: 0 0 8px;
+}
+.node-chart-ranges .tab-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.node-chart-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mid);
+}
+.node-chart-date em {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: var(--status-warning);
+}

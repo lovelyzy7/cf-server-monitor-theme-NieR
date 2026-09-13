@@ -1,6 +1,7 @@
-import { Fragment, Suspense, lazy, useEffect, useId, useMemo, useRef, useState } from "react";
+import { Fragment, lazy, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
 import { Spinner } from "@/components/ui/Spinner";
 import { useMinuteClock } from "@/hooks/useClock";
@@ -17,7 +18,6 @@ import { speedRateColor } from "@/utils/metricTone";
 import {
   buildTodayTrafficRecordSamples,
   summarizeTodayTrafficRecords,
-  type TodayTrafficSample,
   type TodayTrafficStat,
 } from "@/utils/trafficStats";
 import type { NodeInfo } from "@/types/cfsm";
@@ -196,32 +196,108 @@ function PeakSummaryRow({ direction, detail }: { direction: "up" | "down"; detai
   );
 }
 
-function TrafficSamplePanel({
-  uuid,
-  dayStartMs,
-  dayEndMs,
-  hours,
-  live,
-}: {
-  uuid: string;
-  dayStartMs: number;
-  dayEndMs: number;
-  hours: number;
-  live: { up: number; down: number } | null;
-}) {
+const NODE_CHART_RANGES = [
+  { label: "1 小时", hours: 1 },
+  { label: "2 小时", hours: 2 },
+  { label: "3 小时", hours: 3 },
+  { label: "7 小时", hours: 7 },
+  { label: "1 天", hours: 24 },
+  { label: "3 天", hours: 72 },
+  { label: "7 天", hours: 168 },
+] as const;
+
+const NODE_CHART_HOURS_TIERS = [1, 6, 12, 24, 48, 96, 168];
+
+function tierForSpan(spanMs: number): number {
+  const elapsed = Math.max(1, Math.ceil(spanMs / 3_600_000));
+  return NODE_CHART_HOURS_TIERS.find((hours) => hours >= elapsed) ?? 168;
+}
+
+/**
+ * 节点图（双 Y 轴：左=当日流量累计，右=网速）。
+ * 范围联动：1h/2h/3h/7h/1天/3天/7天 快捷档，或日期选择起始日（窗口到当前时刻；
+ * 后端只保留 7 天，更早的日期只有保留期内的数据）。未登录限 24 小时。
+ */
+function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; down: number } | null }) {
+  const { data: me } = useAuth();
+  const [rangeHours, setRangeHours] = useState<number>(24);
+  const [customDate, setCustomDate] = useState<string | null>(null);
+  const nowMs = Date.now();
+  const customStartMs = customDate ? new Date(`${customDate}T00:00:00`).getTime() : null;
+  const startMs = customStartMs ?? nowMs - rangeHours * 3_600_000;
+  const hours = tierForSpan(nowMs - startMs);
+  const retentionMs = 7 * DAY_MS;
+  const allowed = hours <= 24 || me?.logged_in === true;
   const samplesQuery = useQuery({
-    queryKey: ["traffic-day-samples", uuid, dayStartMs],
+    queryKey: ["traffic-node-chart", uuid, startMs],
     queryFn: ({ signal }: { signal: AbortSignal }) =>
       getLoadRecords(uuid, hours, { signal, cache: false }).then((data) =>
-        buildTodayTrafficRecordSamples(data.records, dayStartMs, dayEndMs),
+        buildTodayTrafficRecordSamples(data.records, startMs, nowMs),
       ),
     staleTime: 60_000,
     retry: 1,
+    enabled: allowed,
   });
-  if (samplesQuery.isPending) {
-    return <div style={{ padding: "20px 0", textAlign: "center" }}><Spinner size={18} /></div>;
-  }
-  return <TrafficSampleChart id={`traffic-detail-${uuid}`} samples={samplesQuery.data ?? []} live={live} />;
+  const samples = samplesQuery.data ?? [];
+  const hasSamples = samples.length > 0;
+  const beyondRetention = customStartMs != null && nowMs - customStartMs > retentionMs;
+
+  return (
+    <section className="panel" aria-label="节点当日流量与网速" style={{ marginTop: 8 }}>
+      <header style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+        <strong style={{ letterSpacing: "0.12em", textTransform: "uppercase", fontSize: 13 }}>节点流量与网速</strong>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>
+          {hasSamples ? `${samples.length} 个采样 · 左轴累计按采样积分估算` : "等待采样数据"}
+        </span>
+      </header>
+      <div className="tab-bar node-chart-ranges" role="group" aria-label="时间范围">
+        {NODE_CHART_RANGES.map((range) => (
+          <button
+            key={range.hours}
+            type="button"
+            className={clsx("tab-btn", customDate == null && rangeHours === range.hours && "active")}
+            aria-pressed={customDate == null && rangeHours === range.hours}
+            onClick={() => {
+              setRangeHours(range.hours);
+              setCustomDate(null);
+            }}
+          >
+            {range.label}
+          </button>
+        ))}
+      </div>
+      <label className="node-chart-date">
+        <span>起始日期</span>
+        <input
+          type="date"
+          className="nie-date-input"
+          value={customDate ?? toDateInputValue(nowMs)}
+          min={toDateInputValue(nowMs - retentionMs)}
+          max={toDateInputValue(nowMs)}
+          onChange={(e) => setCustomDate(e.target.value || null)}
+        />
+        {beyondRetention && <em>仅保留最近 7 天，图中为保留期内的数据</em>}
+      </label>
+      {!allowed ? (
+        <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>
+          查看超过 1 天的历史需要登录
+        </div>
+      ) : samplesQuery.isPending ? (
+        <div style={{ padding: "20px 0", textAlign: "center" }}><Spinner size={18} /></div>
+      ) : samplesQuery.isError ? (
+        <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>
+          节点图加载失败{" "}
+          <button type="button" onClick={() => void samplesQuery.refetch()}>重试</button>
+        </div>
+      ) : !hasSamples ? (
+        <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>
+          该时间范围内暂无采样数据
+        </div>
+      ) : (
+        <TrafficRateChart samples={samples} live={live} />
+      )}
+    </section>
+  );
 }
 
 function TrafficDetailToggle({ expanded, onClick }: { expanded: boolean; controlsId: string; onClick: () => void }) {
@@ -229,36 +305,6 @@ function TrafficDetailToggle({ expanded, onClick }: { expanded: boolean; control
     <button type="button" aria-expanded={expanded} onClick={onClick}>
       详情 <span aria-hidden>▾</span>
     </button>
-  );
-}
-
-function TrafficSampleChart({
-  id,
-  samples,
-  live,
-}: {
-  id: string;
-  samples: TodayTrafficSample[];
-  live: { up: number; down: number } | null;
-}) {
-  // 追加一个实时采样点（来自 WebSocket 当前网速），图表右端始终是最新值。
-  const merged = live
-    ? [...samples, { timeMs: Date.now(), up: live.up, down: live.down }]
-    : samples;
-  return (
-    <section id={id} className="panel" aria-label="当日流量累计" style={{ marginTop: 8 }}>
-      <header style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-        <strong style={{ letterSpacing: "0.12em", textTransform: "uppercase", fontSize: 13 }}>当日流量（累计）</strong>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>{merged.length} 个采样 · 按采样积分估算</span>
-      </header>
-      {merged.length === 0 ? (
-        <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>当日暂无速率采样</div>
-      ) : (
-        <Suspense fallback={<div style={{ padding: "20px 0", textAlign: "center" }}><Spinner size={18} /></div>}>
-          <TrafficRateChart samples={merged} mode="total" />
-        </Suspense>
-      )}
-    </section>
   );
 }
 
@@ -394,7 +440,7 @@ export function Traffic() {
               min={toDateInputValue(todayStartMs - maxDayOffset * DAY_MS)}
               max={toDateInputValue(todayStartMs)}
               onChange={(e) => setSelectedDate(e.target.value || null)}
-              style={{ fontFamily: "var(--font-mono)", fontSize: 12, background: "var(--bg-cream)", border: "var(--border-thin)", color: "var(--fg-dark)", padding: "4px 8px" }}
+              className="nie-date-input"
             />
           </label>
           <TrafficSortControl field={sortField} direction={sortDirection} onSelect={handleSort} />
@@ -511,7 +557,7 @@ export function Traffic() {
                         </tr>
                         {expanded && (
                           <tr>
-                            <td colSpan={6}><TrafficSamplePanel uuid={node.uuid} dayStartMs={dayStartMs} dayEndMs={dayEndMs} hours={hours} live={liveByUuid.get(node.uuid) ?? null} /></td>
+                            <td colSpan={6}><TrafficSamplePanel uuid={node.uuid} live={liveByUuid.get(node.uuid) ?? null} /></td>
                           </tr>
                         )}
                       </Fragment>
@@ -555,7 +601,7 @@ export function Traffic() {
                         </dl>
                       </>
                     )}
-                    {expanded && <TrafficSamplePanel uuid={node.uuid} dayStartMs={dayStartMs} dayEndMs={dayEndMs} hours={hours} live={liveByUuid.get(node.uuid) ?? null} />}
+                    {expanded && <TrafficSamplePanel uuid={node.uuid} live={liveByUuid.get(node.uuid) ?? null} />}
                   </div>
                 );
               })}

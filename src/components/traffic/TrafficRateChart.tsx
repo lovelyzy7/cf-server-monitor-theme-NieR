@@ -12,48 +12,45 @@ import {
   type ChartTooltipState,
 } from "@/components/instance/chartShared";
 import { usePreferences } from "@/hooks/usePreferences";
+import { mixSrgbTowardWhite } from "@/utils/canvasColor";
 import { formatByteRateLabel, formatBytes } from "@/utils/format";
 import type { TodayTrafficSample } from "@/utils/trafficStats";
 
 const UP_COLOR = CHART_PALETTE.cpu;
 const DOWN_COLOR = CHART_PALETTE.success;
-
-type TrafficChartMode = "rate" | "total";
-
-function axisRate(value: number) {
-  return Number.isFinite(value) && value > 0 ? formatByteRateLabel(value) : "";
-}
+// 速率线用同色系浅色虚线，与累计实线区分。
+const UP_RATE_COLOR = mixSrgbTowardWhite(UP_COLOR, 0.55);
+const DOWN_RATE_COLOR = mixSrgbTowardWhite(DOWN_COLOR, 0.55);
 
 function axisTotal(value: number) {
   return Number.isFinite(value) && value > 0 ? formatBytes(value) : "";
 }
 
+function axisRate(value: number) {
+  return Number.isFinite(value) && value > 0 ? formatByteRateLabel(value) : "";
+}
+
 /**
- * 流量节点图。
- * - rate：当日上/下行速率折线；
- * - total：当日流量累计（对同一份采样做梯形积分，纯前端计算，不产生额外请求）。
+ * 节点双 Y 轴图：
+ * - 左 Y 轴：当日流量（累计，字节）—— 累计上行/下行实线；
+ * - 右 Y 轴：网速（字节/秒）—— 上行/下行速率虚线。
+ * 累计由速率采样做梯形积分得到（纯前端计算）。
  */
 export function TrafficRateChart({
   samples,
-  mode = "rate",
+  live,
 }: {
   samples: TodayTrafficSample[];
-  mode?: TrafficChartMode;
+  live: { up: number; down: number } | null;
 }) {
   const { resolvedAppearance } = usePreferences();
   const { w, ref: chartSizeRef } = useResponsiveChartSize("grid");
-  const height = w < 560 ? 182 : 220;
-  const isTotal = mode === "total";
+  const height = w < 560 ? 200 : 240;
   const data = useMemo<uPlot.AlignedData>(() => {
     const ordered = [...samples].sort((left, right) => left.timeMs - right.timeMs);
-    if (!isTotal) {
-      return [
-        ordered.map((sample) => sample.timeMs / 1000),
-        ordered.map((sample) => sample.up),
-        ordered.map((sample) => sample.down),
-      ] as uPlot.AlignedData;
+    if (live) {
+      ordered.push({ timeMs: Date.now(), up: live.up, down: live.down });
     }
-    // 累计模式：相邻样本梯形积分，每个时间点显示截至该点的累计流量。
     const times = ordered.map((sample) => sample.timeMs / 1000);
     const up: number[] = [];
     const down: number[] = [];
@@ -69,8 +66,14 @@ export function TrafficRateChart({
       up.push(cumUp);
       down.push(cumDown);
     });
-    return [times, up, down] as uPlot.AlignedData;
-  }, [isTotal, samples]);
+    return [
+      times,
+      up,
+      down,
+      ordered.map((sample) => sample.up),
+      ordered.map((sample) => sample.down),
+    ] as uPlot.AlignedData;
+  }, [live, samples]);
   const dataRef = useRef<uPlot.AlignedData>(data);
   dataRef.current = data;
   const [tooltip, setTooltip] = useState<ChartTooltipState>({ show: false, left: 0, top: 0, rows: [], time: "" });
@@ -79,45 +82,47 @@ export function TrafficRateChart({
       buildChartTooltipHooks({
         dataRef,
         rangeHours: 24,
-        estimatedWidth: 184,
+        estimatedWidth: 196,
         setTooltip,
-        buildRows: (index) => {
-          const upValue = Number(dataRef.current[1]?.[index] ?? 0);
-          const downValue = Number(dataRef.current[2]?.[index] ?? 0);
-          return [
-            { label: isTotal ? "累计上行" : "上行", value: isTotal ? formatBytes(upValue) : formatByteRateLabel(upValue), color: UP_COLOR },
-            { label: isTotal ? "累计下行" : "下行", value: isTotal ? formatBytes(downValue) : formatByteRateLabel(downValue), color: DOWN_COLOR },
-          ];
-        },
+        buildRows: (index) => [
+          { label: "累计上行", value: formatBytes(Number(dataRef.current[1]?.[index] ?? 0)), color: UP_COLOR },
+          { label: "累计下行", value: formatBytes(Number(dataRef.current[2]?.[index] ?? 0)), color: DOWN_COLOR },
+          { label: "上行速率", value: formatByteRateLabel(Number(dataRef.current[3]?.[index] ?? 0)), color: UP_RATE_COLOR },
+          { label: "下行速率", value: formatByteRateLabel(Number(dataRef.current[4]?.[index] ?? 0)), color: DOWN_RATE_COLOR },
+        ],
       }),
-    [isTotal],
+    [],
   );
   const compact = w < 560;
   const baseOptions = useMemo<Omit<uPlot.Options, "width" | "height">>(() => {
     const isDark = resolvedAppearance === "dark";
     const { grid, text } = getAxisColors(isDark);
     return {
-      padding: [8, compact ? 18 : 28, 8, compact ? 4 : 6],
+      padding: [8, compact ? 8 : 10, 8, compact ? 4 : 6],
       cursor: { drag: { x: false, y: false } },
       legend: { show: false },
-      scales: { x: { time: true }, y: { auto: true } },
+      scales: {
+        x: { time: true },
+        y: { auto: true },
+        y2: { auto: true },
+      },
       axes: [
         { stroke: text, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid }, size: 36, values: createTimeAxisFormatter(24) },
-        { stroke: text, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid }, size: compact ? 70 : 82, values: (_self, splits) => splits.map(isTotal ? axisTotal : axisRate) },
+        { scale: "y", stroke: text, grid: { stroke: grid, width: 1 }, ticks: { stroke: grid }, size: compact ? 62 : 74, values: (_self, splits) => splits.map(axisTotal) },
+        { scale: "y2", side: 1, stroke: text, grid: { show: false }, ticks: { stroke: text }, size: compact ? 62 : 74, values: (_self, splits) => splits.map(axisRate) },
       ],
       series: [
         { label: "时间" },
-        { label: isTotal ? "累计上行" : "上行", stroke: UP_COLOR, fill: `${UP_COLOR}12`, width: 1.8, points: { show: false } },
-        { label: isTotal ? "累计下行" : "下行", stroke: DOWN_COLOR, width: 1.8, points: { show: false } },
+        { label: "累计上行", scale: "y", stroke: UP_COLOR, width: 1.9, points: { show: false } },
+        { label: "累计下行", scale: "y", stroke: DOWN_COLOR, width: 1.9, points: { show: false } },
+        { label: "上行速率", scale: "y2", stroke: UP_RATE_COLOR, width: 1.1, dash: [6, 4], points: { show: false } },
+        { label: "下行速率", scale: "y2", stroke: DOWN_RATE_COLOR, width: 1.1, dash: [6, 4], points: { show: false } },
       ],
       hooks: {
         init: [
           (plot) => {
             plot.root.setAttribute("role", "img");
-            plot.root.setAttribute(
-              "aria-label",
-              isTotal ? "本日流量累计图（按采样积分估算）" : "本日网络上行与下行速率折线图",
-            );
+            plot.root.setAttribute("aria-label", "节点当日流量累计与网速双轴图");
           },
           tooltipHooks.onInit,
         ],
@@ -125,23 +130,28 @@ export function TrafficRateChart({
         setCursor: [tooltipHooks.onSetCursor],
       },
     };
-  }, [compact, isTotal, resolvedAppearance, tooltipHooks]);
+  }, [compact, resolvedAppearance, tooltipHooks]);
   const options = useMemo<uPlot.Options>(
     () => ({ ...baseOptions, width: w, height }) as uPlot.Options,
     [baseOptions, height, w],
   );
 
+  const legend = [
+    { label: "累计上行", color: UP_COLOR },
+    { label: "累计下行", color: DOWN_COLOR },
+    { label: "上行速率", color: UP_RATE_COLOR },
+    { label: "下行速率", color: DOWN_RATE_COLOR },
+  ];
+
   return (
     <div>
-      <div style={{ display: "flex", gap: 14, marginBottom: 6, fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <i aria-hidden style={{ width: 10, height: 10, background: UP_COLOR, display: "inline-block" }} />
-          {isTotal ? "累计上行" : "上行"}
-        </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-          <i aria-hidden style={{ width: 10, height: 10, background: DOWN_COLOR, display: "inline-block" }} />
-          {isTotal ? "累计下行" : "下行"}
-        </span>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 6, fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>
+        {legend.map((item) => (
+          <span key={item.label} style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <i aria-hidden style={{ width: 10, height: 10, background: item.color, display: "inline-block" }} />
+            {item.label}
+          </span>
+        ))}
       </div>
       <div ref={chartSizeRef} style={{ position: "relative" }}>
         <UplotReact options={options} data={data} />
