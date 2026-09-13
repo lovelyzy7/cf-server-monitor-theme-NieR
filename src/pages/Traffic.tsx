@@ -246,16 +246,16 @@ function TrafficSampleChart({
     ? [...samples, { timeMs: Date.now(), up: live.up, down: live.down }]
     : samples;
   return (
-    <section id={id} className="panel" aria-label="网络上下行明细" style={{ marginTop: 8 }}>
+    <section id={id} className="panel" aria-label="当日流量累计" style={{ marginTop: 8 }}>
       <header style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
-        <strong style={{ letterSpacing: "0.12em", textTransform: "uppercase", fontSize: 13 }}>当日网络上下行</strong>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>{merged.length} 个采样</span>
+        <strong style={{ letterSpacing: "0.12em", textTransform: "uppercase", fontSize: 13 }}>当日流量（累计）</strong>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>{merged.length} 个采样 · 按采样积分估算</span>
       </header>
       {merged.length === 0 ? (
         <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>当日暂无速率采样</div>
       ) : (
         <Suspense fallback={<div style={{ padding: "20px 0", textAlign: "center" }}><Spinner size={18} /></div>}>
-          <TrafficRateChart samples={merged} />
+          <TrafficRateChart samples={merged} mode="total" />
         </Suspense>
       )}
     </section>
