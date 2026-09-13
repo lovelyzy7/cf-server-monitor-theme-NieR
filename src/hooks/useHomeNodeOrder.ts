@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { HomeNodeSummary } from "@/services/wsStore";
 import {
-  HOME_SPEED_ENTER_BPS,
-  HOME_SPEED_EXIT_BPS,
   HOME_SPEED_RESORT_INTERVAL_MS,
   HOME_SPEED_SAMPLE_WINDOW,
   reconcileSpeedOrder,
@@ -68,12 +66,8 @@ export function useHomeNodeOrder({
   }, [field, direction, nodes, nameByUuid, priceByUuid]);
 
   const [speedUuids, setSpeedUuids] = useState<string[]>([]);
-  const activeRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (field !== "speed") {
-      activeRef.current = new Set();
-      return;
-    }
+    if (field !== "speed") return;
     const recompute = () => {
       const current = nodesRef.current;
       const avg = new Map<string, number>();
@@ -81,19 +75,19 @@ export function useHomeNodeOrder({
         const arr = ringRef.current.get(node.uuid);
         avg.set(node.uuid, arr && arr.length ? arr.reduce((sum, v) => sum + v, 0) / arr.length : 0);
       }
-      const next = new Set<string>();
+      // 所有在线节点都参与实时网速排序。原先 0.5/0.3 MB/s 的进出滞回门在低负载站点
+      // 会让全部节点都「不活跃」，排序退化成默认权重序、看起来像没生效；
+      // 防抖由 3 样本滑动平均 + 5 秒重排间隔承担。
+      const active = new Set<string>();
       for (const node of current) {
         if (node.online === false) continue;
-        const value = avg.get(node.uuid) ?? 0;
-        const threshold = activeRef.current.has(node.uuid) ? HOME_SPEED_EXIT_BPS : HOME_SPEED_ENTER_BPS;
-        if (value >= threshold) next.add(node.uuid);
+        active.add(node.uuid);
       }
-      activeRef.current = next;
       const ordered = sortHomeNodes(current, "speed", direction, {
         nameByUuid: EMPTY_NAME_MAP,
         speedAvgByUuid: avg,
         priceByUuid: EMPTY_PRICE_MAP,
-        speedActive: next,
+        speedActive: active,
       });
       const nextUuids = ordered.map((node) => node.uuid);
       setSpeedUuids((previous) =>

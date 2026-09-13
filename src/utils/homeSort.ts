@@ -38,9 +38,8 @@ export function isHomeSortDirection(value: unknown): value is HomeSortDirection 
   return value === "asc" || value === "desc";
 }
 
-// 速率排序使用 0.5/0.3 MB/s 进出滞回门，避免节点反复换位。
-export const HOME_SPEED_ENTER_BPS = 0.5 * 1024 * 1024;
-export const HOME_SPEED_EXIT_BPS = 0.3 * 1024 * 1024;
+// 速率排序的防抖：滑动窗口样本数 + 重排间隔。所有在线节点都参与排序
+// （见 useHomeNodeOrder），离线节点始终沉底。
 export const HOME_SPEED_SAMPLE_WINDOW = 3;
 export const HOME_SPEED_RESORT_INTERVAL_MS = 5000;
 

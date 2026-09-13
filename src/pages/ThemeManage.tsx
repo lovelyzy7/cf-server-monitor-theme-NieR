@@ -20,6 +20,7 @@ import {
   normalizeCostRateApiUrl,
 } from "@/utils/cost";
 import { normalizeThemeSettings, withPreferredAppearance, type ResolvedThemeSettings } from "@/utils/themeSettings";
+import { HOME_SORT_FIELDS, HOME_SORT_FIELD_LABELS } from "@/utils/homeSort";
 import type { ThemeSettings } from "@/types/cfsm";
 
 const APPEARANCE_OPTIONS = [
@@ -58,6 +59,9 @@ function pickDraft(s: ResolvedThemeSettings) {
     compactShowBilling: s.compactShowBilling,
     compactShowUptime: s.compactShowUptime,
     showConnections: s.showConnections,
+    enableHomeSort: s.enableHomeSort,
+    homeSortField: s.homeSortField,
+    homeSortDirection: s.homeSortDirection,
     showCostSummary: s.showCostSummary,
     showCostSummaryFloatingButton: s.showCostSummaryFloatingButton,
     costRateApiUrl: s.costRateApiUrl,
@@ -282,6 +286,32 @@ export function ThemeManage() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel panel-corners" style={{ marginTop: 16 }}>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>首页排序</h2>
+        <ToggleRow label="允许访客排序" desc="首页右上角排序控件；关闭后始终用下方默认排序" checked={draft.enableHomeSort} onPatch={(v) => patch("enableHomeSort", v)} />
+        <div style={{ marginTop: 8 }}>
+          <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>默认排序</span>
+          <div className="tab-bar">
+            {HOME_SORT_FIELDS.map((option) => (
+              <button key={option} type="button" className={clsx("tab-btn", draft.homeSortField === option && "active")} onClick={() => patch("homeSortField", option)}>
+                {HOME_SORT_FIELD_LABELS[option]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>默认方向</span>
+          <div className="tab-bar">
+            <button type="button" className={clsx("tab-btn", draft.homeSortDirection === "asc" && "active")} onClick={() => patch("homeSortDirection", "asc")}>
+              ↑ 升序
+            </button>
+            <button type="button" className={clsx("tab-btn", draft.homeSortDirection === "desc" && "active")} onClick={() => patch("homeSortDirection", "desc")}>
+              ↓ 降序
+            </button>
           </div>
         </div>
       </div>
