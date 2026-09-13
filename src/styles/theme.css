@@ -3558,3 +3558,32 @@ body .metric-color-swatch input {
   color: var(--fg-dark);
   padding: 2px 6px;
 }
+
+/* ====================================================================
+ * 33. 导航栏品牌图标 + 移动端按钮排序
+ * ==================================================================== */
+
+/* 导航栏左侧品牌图标：与顶栏文字齐高 */
+.terminal-brand-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  vertical-align: -3px;
+}
+
+@media (max-width: 720px) {
+  .terminal-brand-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* 移动端按钮排序（更美观的分组）：外观三键 → 语言 → 视图 → 配色 → 刷新 → 设置 → 后台，节点读数最后 */
+  .terminal-bar .right .control-group { order: 1; }
+  .terminal-bar .right .terminal-btn-lang { order: 2; }
+  .terminal-bar .right .terminal-view-mode { order: 3; }
+  .terminal-bar .right .terminal-btn-colors { order: 4; }
+  .terminal-bar .right .terminal-btn-refresh { order: 5; }
+  .terminal-bar .right .terminal-btn-settings { order: 6; }
+  .terminal-bar .right .terminal-btn-admin { order: 7; }
+  .terminal-bar .right .user-pill { order: 8; }
+}

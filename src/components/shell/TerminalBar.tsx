@@ -169,6 +169,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
     <div className="top-sticky">
       <div className="terminal-bar">
         <div className="left">
+          <img className="terminal-brand-icon" src="./assets/icon.png" alt="" aria-hidden onError={(e) => { e.currentTarget.style.display = "none"; }} />
           <span>YoRHa</span>
           <span>Bunker Terminal</span>
           <span style={{ opacity: 0.85 }}>{siteTitle}</span>
@@ -181,7 +182,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           )}
           <button
             type="button"
-            className="control-button"
+            className="control-button terminal-btn-refresh"
             onClick={() => pingRefresh.refresh()}
             disabled={pingRefresh.nodeCount === 0 || refreshActive}
             aria-busy={refreshActive}
@@ -207,7 +208,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           <button
             ref={colorsButtonRef}
             type="button"
-            className={clsx("control-button", colorsOpen && "is-active")}
+            className={clsx("control-button terminal-btn-colors", colorsOpen && "is-active")}
             aria-pressed={colorsOpen}
             title="卡片配色"
             onClick={() => {
@@ -217,13 +218,13 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           >
             COLORS
           </button>
-          <Link to="/?view=theme-manage" className="control-button" title="主题设置">
+          <Link to="/?view=theme-manage" className="control-button terminal-btn-settings" title="主题设置">
             SETTINGS
           </Link>
           {showAdmin && (
             <a
               href={getAdminUrl()}
-              className="control-button"
+              className="control-button terminal-btn-admin"
               title={me?.logged_in ? "管理后台" : "后台登录"}
             >
               ADMIN
@@ -231,7 +232,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           )}
           <button
             type="button"
-            className="control-button"
+            className="control-button terminal-btn-lang"
             onClick={() => setLang(lang === "zh" ? "en" : "zh")}
             aria-label="切换语言"
             title="切换语言 / Switch language"
