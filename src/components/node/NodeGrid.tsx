@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   useAllNodeMeta,
   useHomeNodeSummaries,
-  useNodeOnlineSummaries,
   useNodeStoreStatus,
 } from "@/hooks/useNode";
 import { useHomepagePingOverview } from "@/hooks/usePingOverview";
@@ -15,7 +14,7 @@ import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { useViewMode } from "@/hooks/useViewMode";
 import { formatBytes, formatByteRate, formatByteRateLabel } from "@/utils/format";
-import { calculateCostSummary, formatCnyMoney, getExchangeRates } from "@/utils/cost";
+import { calculateCostSummary, getExchangeRates } from "@/utils/cost";
 import { useHiddenNodeUuids } from "@/hooks/useVisibleNodes";
 import { speedRateColor } from "@/utils/metricTone";
 import {
@@ -39,9 +38,7 @@ import { CompactNodeCard } from "./CompactNodeCard";
 import { MiniNodeCard } from "./MiniNodeCard";
 import { NodeCardUuid } from "./NodeCard";
 import { NodeListView } from "./NodeListView";
-import { RenewalReminder } from "./RenewalReminder";
 import type { NodeViewMode } from "@/utils/themeSettings";
-import type { RenewalReminderSource } from "@/utils/renewalReminder";
 
 const GRID_MIN_WIDTH: Record<NodeViewMode, number> = {
   large: 360,
@@ -85,40 +82,25 @@ function HomeBrand({ siteName }: { siteName: string }) {
 
 function HomeOverviewCards({
   overview,
-  costSummary,
-  costLoading,
-  costRatesMissing,
   showOverviewRatings,
   showTrafficRating,
   showBandwidthRating,
-  showAssetRating,
   trafficRatingLabels,
   bandwidthRatingLabels,
-  assetRatingLabels,
-  showDetailButton,
-  renewalNodes,
   dense,
 }: {
   overview: HomeOverview;
-  costSummary: { remainingCny: number } | null;
-  costLoading: boolean;
-  costRatesMissing: boolean;
   dense: boolean;
   showOverviewRatings: boolean;
   showTrafficRating: boolean;
   showBandwidthRating: boolean;
-  showAssetRating: boolean;
   trafficRatingLabels: string;
   bandwidthRatingLabels: string;
-  assetRatingLabels: string;
-  showDetailButton: boolean;
-  renewalNodes: RenewalReminderSource[];
 }) {
   const [trafficValue, trafficUnit] = formatBytes(overview.trafficUp + overview.trafficDown).split(" ");
   const rate = formatByteRate(overview.netUp + overview.netDown);
   const onlinePct = overview.totalNodes > 0 ? (overview.onlineNodes / overview.totalNodes) * 100 : 0;
   const offlinePct = overview.totalNodes > 0 ? (overview.offlineNodes / overview.totalNodes) * 100 : 0;
-  const remainingValue = costSummary ? formatCnyMoney(costSummary.remainingCny) : costLoading ? "计算中" : "—";
   const trafficDetailLabel = `↑ ${formatBytes(overview.trafficUp)} · ↓ ${formatBytes(overview.trafficDown)}`;
   const trafficCompactLabel = `↑${formatCompactBytes(overview.trafficUp)} ↓${formatCompactBytes(overview.trafficDown)}`;
   const bandwidthDetailLabel = `↑ ${formatByteRateLabel(overview.netUp)} · ↓ ${formatByteRateLabel(overview.netDown)}`;
@@ -130,10 +112,6 @@ function HomeOverviewCards({
   const bandwidthRating =
     showOverviewRatings && showBandwidthRating
       ? getOverviewRating({ kind: "bandwidth", value: overview.netUp + overview.netDown, customLabels: bandwidthRatingLabels })
-      : null;
-  const assetRating =
-    showOverviewRatings && showAssetRating && costSummary
-      ? getOverviewRating({ kind: "asset", value: costSummary.remainingCny, customLabels: assetRatingLabels })
       : null;
 
   const renderRating = (rating: OverviewRating | null) =>
@@ -208,20 +186,6 @@ function HomeOverviewCards({
           {renderRating(trafficRating)}
         </div>
       </article>
-
-      <article className="overview-card" data-metric="asset">
-        <div className="overview-card-head">
-          <span className="overview-card-label">资产概览</span>
-          {showDetailButton && <RenewalReminder nodes={renewalNodes} />}
-        </div>
-        <div className="overview-card-main">
-          <p className="overview-card-value">{remainingValue}</p>
-        </div>
-        <div className="overview-card-footer">
-          <p className="overview-card-caption">{costRatesMissing ? "汇率获取失败 · 仅统计人民币" : "实时汇率计算"}</p>
-          {renderRating(assetRating)}
-        </div>
-      </article>
     </section>
   );
 }
@@ -279,7 +243,7 @@ function RegionTabs({
 export function NodeGrid() {
   const now = useHourlyClock();
   const nodes = useHomeNodeSummaries();
-  const nodeOnlineSummaries = useNodeOnlineSummaries();
+  const hiddenUuids = useHiddenNodeUuids();
   const allMeta = useAllNodeMeta();
   const { hydrated: storeHydrated, nodeInfoError } = useNodeStoreStatus();
   const { data: me } = useAuth();
@@ -295,7 +259,6 @@ export function NodeGrid() {
   const [selectedRegion, setSelectedRegion] = useState(HOME_ALL_REGION);
   useHomepagePingOverview(mode);
 
-  const hiddenUuids = useHiddenNodeUuids();
   const visibleNodes = useMemo(
     () => nodes.filter((node) => (me?.logged_in === true || !node.hidden) && !hiddenUuids.has(node.uuid)),
     [me?.logged_in, nodes, hiddenUuids],
@@ -304,10 +267,6 @@ export function NodeGrid() {
     () => allMeta.filter((node) => (me?.logged_in === true || !node.hidden) && !hiddenUuids.has(node.uuid)),
     [allMeta, me?.logged_in, hiddenUuids],
   );
-  const renewalNodes = useMemo<RenewalReminderSource[]>(() => {
-    const onlineByUuid = new Map(nodeOnlineSummaries.map((node) => [node.uuid, node.online]));
-    return visibleMeta.map((node) => ({ ...node, online: onlineByUuid.get(node.uuid) ?? null }));
-  }, [nodeOnlineSummaries, visibleMeta]);
   const nameByUuid = useMemo(() => {
     const map = new Map<string, string>();
     for (const node of visibleMeta) map.set(node.uuid, node.name?.trim() || node.uuid);
@@ -337,13 +296,11 @@ export function NodeGrid() {
   );
   const showHomeOverview = themeSettings.isReady && themeSettings.showHomeOverview;
   const hasNodes = visibleMeta.length > 0;
-  const showAssetCard = showHomeOverview && hasNodes;
-  const showCostDetailButton = showAssetCard && themeSettings.isReady && themeSettings.showCostSummary;
   const showCostFloatingButton =
-    themeSettings.isReady && themeSettings.showCostSummaryFloatingButton && hasNodes && !showCostDetailButton;
+    themeSettings.isReady && themeSettings.showCostSummaryFloatingButton && hasNodes;
 
   useEffect(() => {
-    if (!showCostDetailButton && !showCostFloatingButton) return;
+    if (!showCostFloatingButton) return;
     const idleWindow = window as IdleCapableWindow;
     if (idleWindow.requestIdleCallback) {
       const handle = idleWindow.requestIdleCallback(preloadAssetsPage, { timeout: 2_000 });
@@ -351,9 +308,9 @@ export function NodeGrid() {
     }
     const handle = window.setTimeout(preloadAssetsPage, 1_000);
     return () => window.clearTimeout(handle);
-  }, [showCostDetailButton, showCostFloatingButton]);
+  }, [showCostFloatingButton]);
 
-  const costNeeded = showAssetCard || showCostFloatingButton;
+  const costNeeded = showCostFloatingButton;
   const rateQuery = useQuery({
     queryKey: ["cost-rates", themeSettings.costRateApiUrl],
     queryFn: ({ signal }) => getExchangeRates(themeSettings.costRateApiUrl, { signal }),
@@ -379,8 +336,6 @@ export function NodeGrid() {
     }
     return map;
   }, [costSummary]);
-  const costLoading = costNeeded && ratesFetching;
-  const costRatesMissing = costNeeded && !rateQuery.data && !ratesFetching;
   const groupOptions = useMemo(
     () => sortHomeGroupOptions(getHomeGroupOptions(visibleNodes), themeSettings.isReady ? themeSettings.homeGroupOrder : []),
     [visibleNodes, themeSettings.homeGroupOrder, themeSettings.isReady],
@@ -476,18 +431,11 @@ export function NodeGrid() {
         <HomeOverviewCards
           overview={displayOverview}
           dense={mode === "mini" || mode === "list"}
-          showDetailButton={showCostDetailButton}
-          renewalNodes={renewalNodes}
-          costSummary={costSummary}
-          costLoading={costLoading}
-          costRatesMissing={costRatesMissing}
           showOverviewRatings={themeSettings.showOverviewRatings}
           showTrafficRating={themeSettings.showTrafficRating}
           showBandwidthRating={themeSettings.showBandwidthRating}
-          showAssetRating={themeSettings.showAssetRating}
           trafficRatingLabels={themeSettings.trafficRatingLabels}
           bandwidthRatingLabels={themeSettings.bandwidthRatingLabels}
-          assetRatingLabels={themeSettings.assetRatingLabels}
         />
       )}
     </>
