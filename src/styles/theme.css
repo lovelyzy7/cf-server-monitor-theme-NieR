@@ -3128,3 +3128,139 @@ body .metric-color-swatch input {
   gap: 10px;
   margin-bottom: 8px;
 }
+
+/* ====================================================================
+ * 26. 移动端适配
+ * ==================================================================== */
+
+@media (max-width: 720px) {
+  /* 固定列数设置不压到手机：窄屏强制单列（!important 覆盖内联 grid-template） */
+  .node-grid,
+  .node-grid.is-mini,
+  .node-grid.is-compact {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 顶栏右侧控件压缩、可换行 */
+  .terminal-bar {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+  }
+  .terminal-bar .right {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .terminal-bar .control-button {
+    min-width: 26px;
+    height: 24px;
+    padding: 0 7px;
+    font-size: 10px;
+  }
+  .terminal-bar .control-group {
+    gap: 2px;
+  }
+
+  /* 配色面板贴边、不溢出屏幕 */
+  .terminal-bar-picker {
+    right: 8px;
+    left: 8px;
+  }
+  .terminal-bar-picker .metric-color-picker {
+    width: 100%;
+    max-width: none;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  /* 首页总览卡 */
+  .home-overview {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+  }
+  .overview-card {
+    padding: 10px 12px;
+  }
+  .overview-card-value {
+    font-size: 20px;
+  }
+
+  /* 排序/分组控件栏 */
+  .home-controls-bar {
+    gap: 8px;
+  }
+  .home-group-tabs button,
+  .home-region-chip {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
+  .home-sort-trigger {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
+
+  /* 大卡内容在手机上更紧凑 */
+  .node-card {
+    padding: 12px 14px;
+  }
+  .node-card .kv {
+    grid-template-columns: 1fr;
+  }
+  .node-card .kv dd {
+    text-align: left;
+  }
+
+  /* 详情页图表头部元信息换行 */
+  .instance-chart-headmeta {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .instance-chart-meta {
+    flex-wrap: wrap;
+  }
+
+  /* 流量页顶部工具行 */
+  .traffic-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* 主题设置页工具栏按钮等宽铺满 */
+  .theme-manage-toolbar-actions {
+    width: 100%;
+  }
+  .theme-manage-button {
+    flex: 1 1 45%;
+    justify-content: center;
+  }
+
+  /* 表格工具栏与横向滚动 */
+  .node-list-toolbar {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .terminal-bar .left {
+    gap: 6px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+  .terminal-bar .control-button {
+    min-width: 22px;
+    padding: 0 5px;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+  .home-overview {
+    grid-template-columns: 1fr;
+  }
+  .bracket-header {
+    font-size: 14px;
+    letter-spacing: 0.18em;
+  }
+  .overview-card-value {
+    font-size: 18px;
+  }
+  .app-main {
+    padding: 0 8px 20px;
+  }
+}
