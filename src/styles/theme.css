@@ -1,0 +1,556 @@
+/* ====================================================================
+ * CFSM-Theme-Nier —— 监控主题专属样式
+ *
+ * automata.css 提供 NieR 设计系统（配色、面板、光标、表格、顶栏、页脚）；
+ * 本文件补充：
+ *   1. 监控指标 token（进度条/延迟/速率/状态色）
+ *   2. 深色模式（把 lunar-base 的浅色 token 翻成「反色面板」世界）
+ *   3. 节点卡片 / 指标条 / 延迟柱 / 图表 / 悬浮控制等监控组件
+ * ==================================================================== */
+
+/* ------------------------------------------------------------------ *
+ * 1. 监控指标 token（浅色）
+ * ------------------------------------------------------------------ */
+:root {
+  --surface-alpha: 100;
+
+  --progress-bg: #b8b099;
+  --progress-cpu: #8a5a2b;
+  --progress-memory: #6b4c2a;
+  --progress-swap: #4f4a35;
+  --progress-disk: #8a1414;
+  --progress-network: #3a4d24;
+  --progress-load: #57523f;
+
+  --latency-excellent: #3a4d24;
+  --latency-good: #7a7a35;
+  --latency-moderate: #a1762b;
+  --latency-elevated: #8a5a2b;
+  --latency-critical: #6b0a0a;
+
+  --speed-idle: #3a4d24;
+  --speed-low: #a1762b;
+  --speed-high: #8a5a2b;
+  --speed-max: #6b0a0a;
+
+  --traffic-up: #2c2922;
+  --traffic-down: #57523f;
+
+  --status-warning: #a1762b;
+  --status-info: #57523f;
+  --status-online: #3a4d24;
+  --status-offline: #6b0a0a;
+
+  --tag-red-bg: #d8c9c9;
+  --tag-red-fg: #6b0a0a;
+  --tag-gray-bg: #b8b099;
+  --tag-gray-fg: #2c2922;
+
+  --ring: rgba(26, 24, 20, 0.35);
+
+  /* 数据/数值专用字体（automata.css 已在正文用 Segoe UI，这里补变量便于组件引用） */
+  --font-sans: "Segoe UI", Tahoma, Verdana, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "Consolas", "Courier New", ui-monospace, monospace;
+}
+
+/* ------------------------------------------------------------------ *
+ * 2. 深色模式：lunar-base token 翻转 + 监控 token
+ * ------------------------------------------------------------------ */
+:root[data-appearance="dark"] {
+  /* lunar-base 基础 token */
+  --bg-cream: #211f1a;
+  --bg-cream-dark: #3a362c;
+  --fg-dark: #d8d1bb;
+  --fg-mid: #8f8871;
+  --accent: #d8d1bb;
+  --panel: #2c2922;
+  --panel-inverse-bg: #d8d1bb;
+  --panel-inverse-fg: #1a1814;
+  --danger: #c96a5a;
+  --danger-hover: #e08a7a;
+  --success: #7a9a5b;
+  --border-thick: 2px solid var(--accent);
+  --border-thin: 1px solid var(--accent);
+
+  /* 监控 token */
+  --progress-bg: #3a362c;
+  --progress-cpu: #c99a6b;
+  --progress-memory: #b08a6b;
+  --progress-swap: #9a9178;
+  --progress-disk: #c96a5a;
+  --progress-network: #7a9a5b;
+  --progress-load: #b8b099;
+
+  --latency-excellent: #7a9a5b;
+  --latency-good: #b8b05a;
+  --latency-moderate: #c9a24a;
+  --latency-elevated: #c98a4a;
+  --latency-critical: #c96a5a;
+
+  --speed-idle: #7a9a5b;
+  --speed-low: #c9a24a;
+  --speed-high: #c98a4a;
+  --speed-max: #c96a5a;
+
+  --traffic-up: #d8d1bb;
+  --traffic-down: #b8b099;
+
+  --status-warning: #c9a24a;
+  --status-info: #b8b099;
+  --status-online: #7a9a5b;
+  --status-offline: #c96a5a;
+
+  --tag-red-bg: #4a3330;
+  --tag-red-fg: #e0b0a8;
+  --tag-gray-bg: #3a362c;
+  --tag-gray-fg: #d8d1bb;
+
+  --ring: rgba(216, 209, 187, 0.35);
+}
+
+/* 深色下顶栏 / 主导航固定保持炭黑，不从 --accent（已翻成米白）取色。 */
+:root[data-appearance="dark"] .terminal-bar {
+  background: #16150f;
+  color: #d8d1bb;
+}
+:root[data-appearance="dark"] .terminal-bar .right {
+  color: #8f8871;
+}
+:root[data-appearance="dark"] .terminal-bar .right .user-pill,
+:root[data-appearance="dark"] .terminal-bar .right .user-pill a {
+  color: #d8d1bb;
+}
+:root[data-appearance="dark"] .lang-toggle {
+  color: #d8d1bb;
+  border-color: #8f8871;
+}
+:root[data-appearance="dark"] .lang-toggle:hover {
+  background: #d8d1bb;
+  color: #16150f;
+}
+:root[data-appearance="dark"] nav.primary {
+  background: #16150f;
+  border-bottom: 4px double #d8d1bb;
+}
+:root[data-appearance="dark"] nav.primary a {
+  color: #d8d1bb;
+}
+:root[data-appearance="dark"] nav.primary a:hover,
+:root[data-appearance="dark"] nav.primary a.active {
+  background: #d8d1bb;
+  color: #16150f;
+}
+
+/* ------------------------------------------------------------------ *
+ * 3. 画布与应用布局
+ * ------------------------------------------------------------------ */
+html {
+  background-color: var(--bg-cream);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 24px 32px;
+}
+
+/* 网格覆盖层在 automata.css 的 body::before 已定义（z-index 9999、pointer-events none）。 */
+
+/* ------------------------------------------------------------------ *
+ * 4. 顶栏右侧控制按钮（悬浮控制并入顶栏）
+ * ------------------------------------------------------------------ */
+.terminal-bar .control-group {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.terminal-bar .control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  background: transparent;
+  color: var(--bg-cream);
+  border: 1px solid var(--bg-cream-dark);
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  cursor: var(--cur-pointer);
+  transition: background 80ms, color 80ms;
+}
+.terminal-bar .control-button:hover,
+.terminal-bar .control-button.is-active {
+  background: var(--bg-cream);
+  color: #16150f;
+}
+.terminal-bar .control-button[aria-busy="true"] {
+  cursor: var(--cur-progress);
+}
+.terminal-bar .control-button .spin {
+  animation: nie-spin 1.1s linear infinite;
+}
+
+@keyframes nie-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ------------------------------------------------------------------ *
+ * 5. 节点卡片网格
+ * ------------------------------------------------------------------ */
+.node-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+.node-grid.is-compact { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.node-grid.is-mini { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.node-grid.is-list { grid-template-columns: 1fr; }
+
+.node-card {
+  background: var(--panel);
+  border: var(--border-thick);
+  padding: 16px 18px;
+  position: relative;
+}
+.node-card:hover {
+  outline: 2px solid var(--bg-cream-dark);
+  outline-offset: -2px;
+}
+
+.node-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.node-card-name {
+  font-size: 15px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: bold;
+  color: var(--fg-dark);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.node-card-name .flag { flex: 0 0 auto; }
+.node-card-name .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node-card-sub {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-mid);
+  letter-spacing: 0.08em;
+}
+
+/* 卡片上的键值网格 */
+.node-card .kv {
+  grid-template-columns: 120px 1fr;
+  gap: 6px 12px;
+  font-size: 12px;
+}
+.node-card .kv dt { font-size: 10px; }
+.node-card .kv dd { text-align: right; }
+
+/* ------------------------------------------------------------------ *
+ * 6. 指标条（直角）
+ * ------------------------------------------------------------------ */
+.metric-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 64px;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.metric-row .metric-label {
+  color: var(--fg-mid);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+}
+.metric-bar {
+  position: relative;
+  height: 12px;
+  background: var(--progress-bg);
+  border: 1px solid var(--accent);
+}
+.metric-bar .metric-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: var(--metric-color, var(--progress-cpu));
+}
+.metric-row .metric-value {
+  text-align: right;
+  color: var(--fg-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ *
+ * 7. 延迟柱
+ * ------------------------------------------------------------------ */
+.latency-strip {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 34px;
+  margin: 6px 0;
+}
+.latency-col {
+  flex: 1;
+  min-width: 3px;
+  background: var(--latency-excellent);
+  cursor: var(--cur-help);
+}
+.latency-col.is-null { background: var(--progress-bg); }
+.latency-col.is-timeout,
+.latency-col.is-offline { background: var(--latency-critical); }
+.latency-col.is-good { background: var(--latency-good); }
+.latency-col.is-moderate { background: var(--latency-moderate); }
+.latency-col.is-elevated { background: var(--latency-elevated); }
+.latency-col.is-critical { background: var(--latency-critical); }
+
+.latency-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-mid);
+  letter-spacing: 0.06em;
+}
+.latency-legend .line {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: var(--cur-pointer);
+}
+.latency-legend .swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--accent);
+}
+
+/* ------------------------------------------------------------------ *
+ * 8. 概览面板
+ * ------------------------------------------------------------------ */
+.overview-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.overview-cell {
+  text-align: left;
+}
+.overview-cell .k {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--panel-inverse-fg);
+  opacity: 0.7;
+}
+.overview-cell .v {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  color: var(--panel-inverse-fg);
+}
+
+/* ------------------------------------------------------------------ *
+ * 9. 表格（数值列右对齐、等宽）
+ * ------------------------------------------------------------------ */
+table.monitor th[data-numeric],
+table.monitor td[data-numeric] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+table.monitor td[data-strong] {
+  font-weight: bold;
+  color: var(--fg-dark);
+}
+table.monitor th button {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+table.monitor th button:hover {
+  background: transparent;
+  outline: none;
+  color: var(--fg-dark);
+}
+
+/* ------------------------------------------------------------------ *
+ * 10. uPlot 图表主题
+ * ------------------------------------------------------------------ */
+.nie-chart {
+  width: 100%;
+}
+.nie-chart .uplot { font-family: var(--font-mono); }
+.nie-chart .u-title { font-family: var(--font-sans); color: var(--fg-dark); font-weight: bold; }
+.nie-chart .u-legend { font-family: var(--font-mono); font-size: 11px; color: var(--fg-mid); }
+.nie-chart .u-cursor-pt { fill: var(--accent); }
+.nie-chart .u-select { background: var(--fill-secondary, rgba(26,24,20,.1)); }
+
+/* ------------------------------------------------------------------ *
+ * 11. 页脚署名
+ * ------------------------------------------------------------------ */
+.site-footer {
+  margin-top: 48px;
+  padding: 18px 24px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--fg-mid);
+  border-top: 4px double var(--accent);
+}
+.site-footer .site-footer-link {
+  color: var(--fg-dark);
+  border-bottom: 1px dotted var(--fg-dark);
+  cursor: var(--cur-pointer);
+}
+.site-footer .site-footer-link:hover {
+  background: var(--accent);
+  color: var(--bg-cream);
+}
+.site-footer .site-footer-update {
+  margin-left: 8px;
+  color: var(--danger);
+  border-bottom: 1px dotted var(--danger);
+}
+
+/* ------------------------------------------------------------------ *
+ * 12. 加载指示（旋转方框）
+ * ------------------------------------------------------------------ */
+.nie-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--accent);
+  animation: nie-spin 1.1s linear infinite;
+  vertical-align: -3px;
+}
+.nie-spinner.is-lg { width: 24px; height: 24px; }
+
+.center-box {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ *
+ * 13. OS 图标 / 旗帜
+ * ------------------------------------------------------------------ */
+.os-logo {
+  display: inline-block;
+  vertical-align: -2px;
+  border-radius: 0;
+}
+.flag {
+  display: inline-block;
+  vertical-align: -1px;
+}
+
+/* ------------------------------------------------------------------ *
+ * 14. 响应式
+ * ------------------------------------------------------------------ */
+@media (max-width: 760px) {
+  .app-main { padding: 0 12px 24px; }
+  .node-grid { grid-template-columns: 1fr; }
+  .node-card .kv { grid-template-columns: 1fr; }
+  .node-card .kv dd { text-align: left; }
+  .metric-row { grid-template-columns: 90px 1fr 56px; }
+}
+
+/* ------------------------------------------------------------------ *
+ * 15. 打磨：焦点 / 选中 / 滚动条
+ * ------------------------------------------------------------------ */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--bg-cream);
+}
+
+/* 直角滚动条（NieR 风格） */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-cream-dark);
+  border: 2px solid var(--bg-cream);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-mid);
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-cream);
+}
+:root[data-appearance="dark"] ::-webkit-scrollbar-thumb {
+  border-color: var(--bg-cream);
+}
+:root[data-appearance="dark"] ::-webkit-scrollbar-track {
+  background: var(--bg-cream);
+}
+
+/* 链接在深色反色面板内保持可读 */
+:root[data-appearance="dark"] .panel.inverse a {
+  color: var(--panel-inverse-fg);
+  border-bottom-color: var(--panel-inverse-fg);
+}
+
+/* 卡片链接去掉下划线，保持纯面板观感 */
+.node-card {
+  text-decoration: none !important;
+  color: inherit;
+  border-bottom: none;
+  transition: transform 80ms, box-shadow 80ms;
+}
+.node-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.18);
+}
+
+/* 极窄屏：顶栏按钮压缩 */
+@media (max-width: 480px) {
+  .terminal-bar .control-button {
+    min-width: 24px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+  .terminal-bar .right {
+    gap: 8px;
+  }
+}
