@@ -3321,16 +3321,26 @@ body .metric-color-swatch input {
     text-transform: uppercase;
     cursor: var(--cur-pointer);
   }
-  .mobile-nav a:hover,
   .mobile-nav a.active {
     background: #cfc7b0;
     color: #1a1814;
     outline: none;
   }
-  :root[data-appearance="dark"] .mobile-nav a:hover,
   :root[data-appearance="dark"] .mobile-nav a.active {
     background: #e6dfc9;
     color: #060504;
+  }
+  /* 悬停高亮只在真有鼠标的设备生效：触屏点击后台等按钮不再粘住同色背景 */
+  @media (hover: hover) {
+    .mobile-nav a:hover {
+      background: #cfc7b0;
+      color: #1a1814;
+      outline: none;
+    }
+    :root[data-appearance="dark"] .mobile-nav a:hover {
+      background: #e6dfc9;
+      color: #060504;
+    }
   }
   .mobile-nav a[aria-hidden],
   .mobile-nav a span[aria-hidden] {

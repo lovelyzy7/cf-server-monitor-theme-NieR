@@ -28,6 +28,16 @@ export function AppShell() {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [normalizedPath, search]);
+  // 浏览器前进/后退从 bfcache 恢复时不保留旧状态：强制整页刷新，重新拉数据与实时连接。
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
   const isDataRoute =
     normalizedPath === "/" ||
     normalizedPath === "/traffic" ||
