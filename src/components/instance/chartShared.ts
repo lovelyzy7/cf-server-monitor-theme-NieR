@@ -332,11 +332,18 @@ export function buildChartTooltipHooks({
     onInit: (u) => {
       view = u.root.ownerDocument.defaultView;
       u.root.addEventListener("mouseleave", hide);
+      // 失焦/鼠标离开页面/滚动时兜底收起，避免悬浮详情卡住不消失。
+      view?.addEventListener("blur", hide);
+      view?.document.addEventListener("mouseleave", hide);
+      view?.addEventListener("scroll", hide, true);
       unbindTouch = bindTouchCursor(u);
     },
     onDestroy: (u) => {
       cancelScheduled();
       u.root.removeEventListener("mouseleave", hide);
+      view?.removeEventListener("blur", hide);
+      view?.document.removeEventListener("mouseleave", hide);
+      view?.removeEventListener("scroll", hide, true);
       unbindTouch?.();
       unbindTouch = null;
       view = null;

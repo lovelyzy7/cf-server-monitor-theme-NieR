@@ -57,6 +57,7 @@ export function HomeSortControl({ state }: { state: HomeSortControlState }) {
       >
         <SortIcon direction={direction} />
         <span>{HOME_SORT_FIELD_LABELS[field]}</span>
+        <span aria-hidden>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
         <div id={panelId} className="home-sort-panel" role="group" aria-label="排序方式">

@@ -139,7 +139,7 @@ function TrafficSortControl({
       >
         <span aria-hidden>{direction === "asc" ? "↑" : "↓"}</span>
         <span>{labels[field]}</span>
-        <span aria-hidden>▾</span>
+        <span aria-hidden>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
         <div id={panelId} className="home-sort-panel" role="group" aria-label="排序方式">
@@ -329,7 +329,15 @@ function TrafficDetailToggle({ expanded, onClick }: { expanded: boolean; control
 }
 
 export function Traffic() {
-  const [expandedUuid, setExpandedUuid] = useState<string | null>(null);
+  const [expandedUuids, setExpandedUuids] = useState<Set<string>>(new Set());
+  const toggleExpanded = (uuid: string) => {
+    setExpandedUuids((prev) => {
+      const next = new Set(prev);
+      if (next.has(uuid)) next.delete(uuid);
+      else next.add(uuid);
+      return next;
+    });
+  };
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [sortField, setSortField] = useState<TrafficSortField>("total");
   const [sortDirection, setSortDirection] = useState<TrafficSortDirection>("desc");
@@ -556,7 +564,7 @@ export function Traffic() {
                 </thead>
                 <tbody>
                   {details.map(({ node, stat, total }) => {
-                    const expanded = expandedUuid === node.uuid;
+                    const expanded = expandedUuids.has(node.uuid);
                     const detailId = `traffic-detail-${node.uuid}`;
                     return (
                       <Fragment key={node.uuid}>
@@ -586,7 +594,7 @@ export function Traffic() {
                             </span>
                           </td>
                           <td data-action>
-                            <TrafficDetailToggle expanded={expanded} controlsId={detailId} onClick={() => setExpandedUuid(expanded ? null : node.uuid)} />
+                            <TrafficDetailToggle expanded={expanded} controlsId={detailId} onClick={() => toggleExpanded(node.uuid)} />
                           </td>
                         </tr>
                         {expanded && (
@@ -603,7 +611,7 @@ export function Traffic() {
           ) : (
             <div className="assets-card-list">
               {details.map(({ node, stat, total }) => {
-                const expanded = expandedUuid === node.uuid;
+                const expanded = expandedUuids.has(node.uuid);
                 const detailId = `traffic-mobile-detail-${node.uuid}`;
                 return (
                   <div className="panel" key={node.uuid}>
@@ -614,7 +622,7 @@ export function Traffic() {
                       </Link>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <strong style={{ fontFamily: "var(--font-mono)" }}>{stat.hasSamples ? formatBytes(total) : "无数据"}</strong>
-                        <TrafficDetailToggle expanded={expanded} controlsId={detailId} onClick={() => setExpandedUuid(expanded ? null : node.uuid)} />
+                        <TrafficDetailToggle expanded={expanded} controlsId={detailId} onClick={() => toggleExpanded(node.uuid)} />
                       </div>
                     </div>
                     {stat.hasSamples && (

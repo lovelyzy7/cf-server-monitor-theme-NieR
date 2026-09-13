@@ -3679,3 +3679,80 @@ body .metric-color-swatch input {
   letter-spacing: 0.04em;
   color: var(--status-warning);
 }
+
+/* 图表悬浮详情不拦截鼠标（悬浮点失焦后随 hide 逻辑消失） */
+.instance-chart-tooltip {
+  pointer-events: none;
+}
+
+/* ====================================================================
+ * 36. 刷新图标（CSS 绘制，消除字符错位） + 移动端导航栏重组
+ * ==================================================================== */
+
+/* 刷新圆环箭头：与文字基线对齐、尺寸一致 */
+.refresh-icon {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  position: relative;
+  vertical-align: -1px;
+  flex-shrink: 0;
+}
+.refresh-icon::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -1.5px;
+  border: 3px solid transparent;
+  border-left-color: currentColor;
+  transform: rotate(-14deg);
+}
+.refresh-icon.spin {
+  animation: nie-spin 1.1s linear infinite;
+}
+
+/* 移动端专用按钮：桌面隐藏 */
+.terminal-btn-theme,
+.terminal-menu {
+  display: none;
+}
+.terminal-menu-picker {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  /* 外观三键 / 视图 / 配色 / 设置 / 后台 收进下拉栏 */
+  .terminal-bar .right .control-group,
+  .terminal-bar .right .terminal-view-mode,
+  .terminal-bar .right .terminal-btn-colors,
+  .terminal-bar .right .terminal-btn-settings,
+  .terminal-bar .right .terminal-btn-admin {
+    display: none;
+  }
+  .terminal-btn-theme,
+  .terminal-menu {
+    display: inline-flex;
+  }
+
+  /* 顺序：NODES → 刷新 → 主题切换 → 语言 → 下拉栏 */
+  .terminal-bar .right .user-pill { order: 1; }
+  .terminal-bar .right .terminal-btn-refresh { order: 2; }
+  .terminal-bar .right .terminal-btn-theme { order: 3; }
+  .terminal-bar .right .terminal-btn-lang { order: 4; }
+  .terminal-bar .right .terminal-menu { order: 5; }
+
+  /* 下拉栏面板：贴在导航栏下方（留 8px 间隙） */
+  .terminal-menu-picker {
+    display: block;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 8px;
+    z-index: 70;
+  }
+  .terminal-menu-picker .home-sort-panel {
+    position: static;
+  }
+}

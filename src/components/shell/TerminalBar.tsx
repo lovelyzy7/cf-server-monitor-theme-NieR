@@ -18,6 +18,12 @@ const APPEARANCE_OPTIONS: Array<{ value: Appearance; label: string; title: strin
   { value: "dark", label: "DARK", title: "深色" },
 ];
 
+const APPEARANCE_NEXT: Record<Appearance, Appearance> = {
+  light: "system",
+  system: "dark",
+  dark: "light",
+};
+
 const VIEW_MODE_OPTIONS: Array<{ value: NodeViewMode; label: string }> = [
   { value: "large", label: "LARGE" },
   { value: "compact", label: "COMPACT" },
@@ -77,7 +83,7 @@ function ViewModeDropdown() {
         title="切换卡片视图"
         onClick={() => setOpen((value) => !value)}
       >
-        {current} <span aria-hidden>▾</span>
+        {current} <span aria-hidden>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
         <div id={panelId} className="home-sort-panel" role="group" aria-label="卡片视图">
@@ -106,37 +112,46 @@ function ViewModeDropdown() {
 
 /**
  * 顶部「Bunker Terminal」状态栏 + 主导航。
- *
- * 左侧：YoRHa · Bunker Terminal · 站点标题 + 在线读数。
- * 右侧：外观三键 / 视图下拉 / 配色 / 刷新延迟 / 主题设置 / 后台 / 语言，终端胶囊按钮。
+ * 桌面：外观三键 / 视图下拉 / 配色 / 刷新 / 设置 / 后台 / 语言。
+ * 移动端：NODES → 刷新 → 主题切换 → 语言 → 下拉栏（视图/配色/设置/后台收进下拉）。
  */
 export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshState }) {
   const { data: config } = usePublicConfig();
   const { data: me } = useAuth();
   const { appearance, setAppearance } = usePreferences();
+  const { mode, setMode } = useViewMode();
   const { lang, setLang, t } = useLanguage();
   const themeSettings = useThemeSettings();
   // 初始化（config 未到）时先显示，避免底部后台按钮闪没；配置到达后按开关决定。
   const showAdmin = !themeSettings.isReady || themeSettings.enableAdminButton;
   const [colorsOpen, setColorsOpen] = useState(false);
   const [colorsMounted, setColorsMounted] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const colorsRootRef = useRef<HTMLDivElement | null>(null);
   const colorsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const menuRootRef = useRef<HTMLDivElement | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const summaries = useHomeNodeSummaries();
   const storeStatus = useNodeStoreStatus();
   const location = useLocation();
 
-  // COLORS 面板：点击外部 / Esc 关闭。
+  // COLORS 面板与下拉栏：点击外部 / Esc 关闭。
   useEffect(() => {
-    if (!colorsOpen) return;
+    if (!colorsOpen && !menuOpen) return;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
       if (colorsRootRef.current?.contains(target)) return;
       if (colorsButtonRef.current?.contains(target)) return;
+      if (menuRootRef.current?.contains(target)) return;
+      if (menuButtonRef.current?.contains(target)) return;
       setColorsOpen(false);
+      setMenuOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setColorsOpen(false);
+      if (event.key === "Escape") {
+        setColorsOpen(false);
+        setMenuOpen(false);
+      }
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -144,7 +159,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [colorsOpen]);
+  }, [colorsOpen, menuOpen]);
 
   const siteTitle = config?.sitename?.trim() || "CF-Server-Monitor";
   const online = summaries.filter((s) => s.online).length;
@@ -152,8 +167,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
   const refreshTitle = buildRefreshTitle(pingRefresh);
   const refreshActive = pingRefresh.status === "loading";
 
-  const isThemeManageView =
-    location.pathname === "/" && location.search.includes("theme-manage");
+  const isThemeManageView = location.pathname === "/" && location.search.includes("theme-manage");
 
   const navLink = (to: string, label: string, isActive?: () => boolean) => {
     const path = to.split("?")[0] ?? to;
@@ -163,6 +177,12 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
         {label}
       </Link>
     );
+  };
+
+  const openColors = () => {
+    setColorsMounted(true);
+    setMenuOpen(false);
+    setColorsOpen(true);
   };
 
   return (
@@ -188,7 +208,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
             aria-busy={refreshActive}
             title={refreshTitle}
           >
-            <span className={clsx(refreshActive && "spin")}>⟳</span> REFRESH
+            <span className={clsx("refresh-icon", refreshActive && "spin")} aria-hidden /> REFRESH
           </button>
           <div className="control-group" role="group" aria-label="外观选择">
             {APPEARANCE_OPTIONS.map((option) => (
@@ -204,6 +224,15 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
               </button>
             ))}
           </div>
+          {/* 移动端：单个主题切换按钮（桌面隐藏） */}
+          <button
+            type="button"
+            className="control-button terminal-btn-theme"
+            title={`主题：${APPEARANCE_OPTIONS.find((o) => o.value === appearance)?.label ?? "SYSTEM"}，点击切换`}
+            onClick={() => setAppearance(APPEARANCE_NEXT[appearance])}
+          >
+            {APPEARANCE_OPTIONS.find((o) => o.value === appearance)?.label ?? "SYSTEM"}
+          </button>
           <ViewModeDropdown />
           <button
             ref={colorsButtonRef}
@@ -239,6 +268,19 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           >
             {lang === "zh" ? "EN" : "中文"}
           </button>
+          {/* 移动端：下拉栏按钮（桌面隐藏） */}
+          <button
+            ref={menuButtonRef}
+            type="button"
+            className="control-button terminal-menu"
+            aria-haspopup="true"
+            aria-expanded={menuOpen}
+            aria-label="更多"
+            title="更多"
+            onClick={() => setMenuOpen((value) => !value)}
+          >
+            ≡
+          </button>
         </div>
       </div>
       <nav className="primary">
@@ -272,6 +314,39 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           </div>
         </Suspense>
       )}
+      <div className="terminal-menu-picker" ref={menuRootRef}>
+        {menuOpen && (
+          <div className="home-sort-panel" role="group" aria-label="更多">
+            {VIEW_MODE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className="home-sort-item"
+                data-active={mode === option.value ? "true" : "false"}
+                aria-current={mode === option.value ? "true" : undefined}
+                onClick={() => {
+                  setMode(option.value);
+                  setMenuOpen(false);
+                }}
+              >
+                <span className="home-sort-item-label">视图 {option.label}</span>
+                {mode === option.value && <span aria-hidden>✓</span>}
+              </button>
+            ))}
+            <button type="button" className="home-sort-item" onClick={openColors}>
+              <span className="home-sort-item-label">配色</span>
+            </button>
+            <Link to="/?view=theme-manage" className="home-sort-item" onClick={() => setMenuOpen(false)}>
+              <span className="home-sort-item-label">{t("nav.settings")}</span>
+            </Link>
+            {showAdmin && (
+              <a href={getAdminUrl()} className="home-sort-item">
+                <span className="home-sort-item-label">{t("nav.admin")}</span>
+              </a>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
