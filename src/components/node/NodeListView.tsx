@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "react-router-dom";
 import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
@@ -18,6 +18,46 @@ import type { PingOverviewTaskLoadState } from "@/types/cfsm";
 import { HOMEPAGE_PING_BUCKET_COUNT } from "@/hooks/usePingOverview";
 
 const GAUGE_SEGMENTS = 14;
+
+/* ---- 可拖拽调整的列宽 ---- */
+const DEFAULT_LIST_COLS = [220, 130, 100, 100, 100, 90, 110, 130, 100, 120];
+const LIST_COLS_STORAGE_KEY = "cfsm-nier:list-cols:v1";
+const MIN_COL_WIDTH = 56;
+const LIST_HEAD_CELLS = [
+  { label: "节点", className: "" },
+  { label: "系统", className: "col-os" },
+  { label: "CPU", className: "col-metric" },
+  { label: "内存", className: "col-metric" },
+  { label: "磁盘", className: "col-metric" },
+  { label: "负载", className: "col-load" },
+  { label: "实时", className: "col-live" },
+  { label: "流量", className: "col-traffic" },
+  { label: "网络", className: "col-net" },
+  { label: "在线 / 到期", className: "col-life" },
+];
+
+function readListCols(): number[] {
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(LIST_COLS_STORAGE_KEY) ?? "null");
+    if (Array.isArray(parsed) && parsed.length === DEFAULT_LIST_COLS.length) {
+      const nums = parsed.map((value) => Number(value));
+      if (nums.every((value) => Number.isFinite(value) && value >= MIN_COL_WIDTH)) {
+        return nums;
+      }
+    }
+  } catch {
+    // 落到默认列宽。
+  }
+  return DEFAULT_LIST_COLS;
+}
+
+function writeListCols(cols: number[]) {
+  try {
+    window.localStorage.setItem(LIST_COLS_STORAGE_KEY, JSON.stringify(cols));
+  } catch {
+    // 持久化失败时本次会话内仍生效。
+  }
+}
 
 function clamp01(value: number) {
   return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
@@ -299,20 +339,64 @@ const NodeRow = memo(function NodeRow({ uuid }: { uuid: string }) {
 });
 
 export function NodeListView({ uuids }: { uuids: string[] }) {
+  const [cols, setCols] = useState<number[]>(readListCols);
+  const colsRef = useRef(cols);
+  colsRef.current = cols;
+  const dragRef = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
+
+  const colVars = useMemo(() => {
+    const vars: Record<string, string> = {};
+    cols.forEach((width, index) => {
+      vars[`--lc${index}`] = `${width}px`;
+    });
+    return vars as CSSProperties;
+  }, [cols]);
+
+  const onHandlePointerDown = (index: number) => (event: ReactPointerEvent<HTMLSpanElement>) => {
+    event.preventDefault();
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // 指针已结束时忽略。
+    }
+    dragRef.current = { index, startX: event.clientX, startWidth: cols[index] ?? MIN_COL_WIDTH };
+  };
+
+  const onHandlePointerMove = (event: ReactPointerEvent<HTMLSpanElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = event.clientX - drag.startX;
+    const nextWidth = Math.max(MIN_COL_WIDTH, Math.round(drag.startWidth + dx));
+    setCols((prev) => prev.map((width, index) => (index === drag.index ? nextWidth : width)));
+  };
+
+  const onHandlePointerUp = () => {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    writeListCols(colsRef.current);
+  };
+
   return (
     <div className="node-list-scroll">
-      <div className="node-list">
+      <div className="node-list" style={colVars}>
         <div className="node-list-row node-list-head" aria-hidden>
-          <div className="node-list-cell">节点</div>
-          <div className="node-list-cell col-os">系统</div>
-          <div className="node-list-cell col-metric">CPU</div>
-          <div className="node-list-cell col-metric">内存</div>
-          <div className="node-list-cell col-metric">磁盘</div>
-          <div className="node-list-cell col-load">负载</div>
-          <div className="node-list-cell col-live">实时</div>
-          <div className="node-list-cell col-traffic">流量</div>
-          <div className="node-list-cell col-net">网络</div>
-          <div className="node-list-cell col-life">在线 / 到期</div>
+          {LIST_HEAD_CELLS.map((cell, index) => (
+            <div key={cell.label} className={`node-list-cell node-list-head-cell${cell.className ? ` ${cell.className}` : ""}`}>
+              {cell.label}
+              {index < LIST_HEAD_CELLS.length - 1 && (
+                <span
+                  className="node-list-resize-handle"
+                  role="separator"
+                  aria-orientation="vertical"
+                  title={`拖拽调整「${cell.label}」列宽`}
+                  onPointerDown={onHandlePointerDown(index)}
+                  onPointerMove={onHandlePointerMove}
+                  onPointerUp={onHandlePointerUp}
+                  onPointerCancel={onHandlePointerUp}
+                />
+              )}
+            </div>
+          ))}
         </div>
         {uuids.map((uuid) => (
           <NodeRow key={uuid} uuid={uuid} />
