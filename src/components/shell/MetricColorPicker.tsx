@@ -29,6 +29,16 @@ const ICONS: Record<MetricColorKey, string> = {
   trafficDown: "↓",
 };
 
+/** 内置色板：NieR 主色 + 常用强调色，取代浏览器原生取色器。 */
+const PRESET_COLORS = [
+  "#2c2922", "#57523f", "#4f4a35", "#6b4c2a", "#8a5a2b", "#a1762b",
+  "#1a1814", "#3a4d24", "#7a9a5b", "#86a762", "#3a6b4f", "#2c5a6b",
+  "#8a1414", "#6b0a0a", "#cf7160", "#e28773", "#d2924e", "#d2ab4e",
+  "#c99a6b", "#b08a6b", "#9a9178", "#c0b896", "#c2b95e", "#e6dfc9",
+];
+
+const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
+
 export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
   const {
     colors,
@@ -54,6 +64,25 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
     (key: MetricColorKey) => colors[key] ?? base[key],
     [colors, base],
   );
+
+  // 内置取色弹层：每行一个，展开后显示预设色板 + HEX 输入。
+  const [activeKey, setActiveKey] = useState<MetricColorKey | null>(null);
+  const [hexDraft, setHexDraft] = useState("");
+  const togglePicker = (key: MetricColorKey) => {
+    if (activeKey === key) {
+      setActiveKey(null);
+      return;
+    }
+    setActiveKey(key);
+    setHexDraft(valueOf(key));
+  };
+  const commitHex = (key: MetricColorKey, value: string) => {
+    setHexDraft(value);
+    if (HEX_PATTERN.test(value.trim())) {
+      setColor(key, value.trim().toLowerCase());
+    }
+  };
+
   return (
     <div className="metric-color-picker" role="group" aria-label="卡片配色" hidden={hidden}>
       <div className="metric-color-picker-head">
@@ -126,13 +155,23 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
           <div className="metric-color-list">
             {METRIC_COLOR_META.filter((item) => item.group === group.id).map(({ key, label }) => {
               const overridden = colors[key] != null;
+              const open = activeKey === key;
+              const current = valueOf(key);
               return (
                 <div className="metric-color-row" key={key}>
                   <span aria-hidden>{ICONS[key]}</span>
                   <span className="metric-color-name">{label}</span>
-                  <label className="metric-color-swatch" style={{ background: valueOf(key) }}>
-                    <input type="color" value={valueOf(key)} onChange={(event) => setColor(key, event.target.value)} aria-label={`${label} 颜色`} />
-                  </label>
+                  <button
+                    type="button"
+                    className="metric-color-swatch"
+                    style={{ background: current }}
+                    aria-expanded={open}
+                    aria-label={`${label} 颜色`}
+                    title="选择颜色"
+                    onClick={() => togglePicker(key)}
+                  >
+                    <span className="metric-color-swatch-arrow" aria-hidden>▾</span>
+                  </button>
                   <button
                     type="button"
                     className="metric-color-reset"
@@ -146,6 +185,41 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
                   >
                     <span aria-hidden>↺</span>
                   </button>
+                  {open && (
+                    <div className="metric-color-popover" role="group" aria-label={`${label} 颜色选择`}>
+                      <div className="metric-color-presets">
+                        {PRESET_COLORS.map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            className="metric-color-preset"
+                            style={{ background: preset }}
+                            data-active={current.toLowerCase() === preset.toLowerCase() ? "true" : "false"}
+                            aria-label={preset}
+                            title={preset}
+                            onClick={() => {
+                              setColor(key, preset);
+                              setHexDraft(preset);
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <label className="metric-color-hex">
+                        <span>HEX</span>
+                        <input
+                          type="text"
+                          value={hexDraft}
+                          onChange={(event) => commitHex(key, event.target.value)}
+                          onBlur={() => setHexDraft(valueOf(key))}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") setHexDraft(valueOf(key));
+                          }}
+                          aria-label={`${label} 十六进制颜色`}
+                          spellCheck={false}
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
               );
             })}
