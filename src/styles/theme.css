@@ -3402,21 +3402,21 @@ body .metric-color-swatch input {
  * 29. 移动端修复：COLORS 底部抽屉、设置页滚动条
  * ==================================================================== */
 @media (max-width: 720px) {
-  /* COLORS 改为底部抽屉：贴在底部停靠栏上方，最多占 42vh，不再覆盖大部分页面 */
+  /* COLORS：位于导航栏下方（留 8px 间隙），宽度随内容、不拉伸占满，超高时可纵向滚动 */
   .terminal-bar-picker {
-    position: fixed;
-    top: auto;
-    left: 8px;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: auto;
     right: 8px;
-    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    bottom: auto;
     margin-top: 0;
   }
   .terminal-bar-picker .metric-color-picker {
-    width: 100%;
-    max-width: none;
-    max-height: 42vh;
+    width: max-content;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 180px);
     overflow-y: auto;
-    box-shadow: 0 -4px 0 rgba(0, 0, 0, 0.25);
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
   }
 
   /* 设置页：面板与页签彻底无滚动条 */
