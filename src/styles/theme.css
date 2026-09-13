@@ -3387,3 +3387,39 @@ body .metric-color-swatch input {
     margin-top: 4px;
   }
 }
+
+/* ====================================================================
+ * 29. 移动端修复：COLORS 底部抽屉、设置页滚动条
+ * ==================================================================== */
+@media (max-width: 720px) {
+  /* COLORS 改为底部抽屉：贴在底部停靠栏上方，最多占 42vh，不再覆盖大部分页面 */
+  .terminal-bar-picker {
+    position: fixed;
+    top: auto;
+    left: 8px;
+    right: 8px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    margin-top: 0;
+  }
+  .terminal-bar-picker .metric-color-picker {
+    width: 100%;
+    max-width: none;
+    max-height: 42vh;
+    overflow-y: auto;
+    box-shadow: 0 -4px 0 rgba(0, 0, 0, 0.25);
+  }
+
+  /* 设置页：面板与页签彻底无滚动条 */
+  .theme-manage .panel,
+  .theme-manage .panel-corners {
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+  .theme-manage .tab-bar {
+    overflow-x: visible;
+    overflow-y: visible;
+  }
+  .theme-manage textarea {
+    overflow: hidden;
+  }
+}

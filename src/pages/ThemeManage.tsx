@@ -254,7 +254,7 @@ export function ThemeManage() {
   }, [sourceSignature]);
 
   return (
-    <div>
+    <div className="theme-manage">
       <div className="theme-masthead-topline" style={{ marginTop: 16 }}>
         <Link className="instance-page-back" to="/">{t("common.backHome")}</Link>
         <div className="theme-manage-toolbar-actions">
