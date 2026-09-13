@@ -3106,3 +3106,25 @@ body .metric-color-swatch input {
 
 /* Swap 栏（三档卡片共用） */
 .mini-node-vitals .metric-item:last-child { margin-bottom: 0; }
+
+/* ====================================================================
+ * 25. 本轮修复：拉伸链接不反转变黑、表格样式重置工具栏
+ * ==================================================================== */
+
+/* 整卡拉伸链接：去除 anchor 的悬停反转与点状下划线（卡片变黑的根因） */
+.card-stretched-link,
+.card-stretched-link:hover {
+  background: transparent;
+  color: inherit;
+  text-decoration: none;
+  border-bottom: none;
+}
+
+/* 表格工具栏（重置按钮居右） */
+.node-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 8px;
+}

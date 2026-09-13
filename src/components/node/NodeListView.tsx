@@ -6,6 +6,7 @@ import { OsLogo } from "@/components/ui/OsLogo";
 import { useNodeCardModel } from "@/hooks/useNodeCardModel";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { usePreferences } from "@/hooks/usePreferences";
+import { getLocalThemeSettings, saveLocalThemeSettings } from "@/services/themeSettingsStore";
 import { useMetricColorsVersion } from "@/hooks/useMetricColors";
 import { formatBytes } from "@/utils/format";
 import { speedRateColor } from "@/utils/metricTone";
@@ -419,9 +420,27 @@ export function NodeListView({ uuids }: { uuids: string[] }) {
     writeListCols(colsRef.current);
   };
 
+  /** 样式重置：恢复默认列宽，并恢复全部列可见。 */
+  const resetTableStyle = () => {
+    setCols(DEFAULT_LIST_COLS);
+    writeListCols(DEFAULT_LIST_COLS);
+    const current = getLocalThemeSettings() as Record<string, unknown>;
+    if (current.listColumns != null) {
+      const next = { ...current };
+      delete next.listColumns;
+      saveLocalThemeSettings(next as Parameters<typeof saveLocalThemeSettings>[0]);
+    }
+  };
+
   return (
-    <div className="node-list-scroll">
-      <div className="node-list" style={colVars}>
+    <div>
+      <div className="node-list-toolbar">
+        <button type="button" className="cost-summary-action" onClick={resetTableStyle} title="恢复默认列宽与列设置">
+          <span aria-hidden>↺</span> 重置样式
+        </button>
+      </div>
+      <div className="node-list-scroll">
+        <div className="node-list" style={colVars}>
         <div className="node-list-row node-list-head" aria-hidden>
           <div className="node-list-cell node-list-head-cell">节点</div>
           {visibleColumns.map((column) => (
@@ -443,6 +462,7 @@ export function NodeListView({ uuids }: { uuids: string[] }) {
         {uuids.map((uuid) => (
           <NodeRow key={uuid} uuid={uuid} hiddenKeys={hiddenKeys} />
         ))}
+      </div>
       </div>
     </div>
   );
