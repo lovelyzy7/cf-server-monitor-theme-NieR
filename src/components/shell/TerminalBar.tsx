@@ -217,6 +217,26 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
         {navLink("/", t("nav.status"))}
         {navLink("/traffic", t("nav.traffic"))}
       </nav>
+      <nav className="mobile-nav" aria-label="移动端导航">
+        <Link to="/" className={location.pathname === "/" ? "active" : undefined}>
+          <span aria-hidden>▣</span>
+          <span>{t("nav.status")}</span>
+        </Link>
+        <Link to="/traffic" className={location.pathname === "/traffic" ? "active" : undefined}>
+          <span aria-hidden>≋</span>
+          <span>{t("nav.traffic")}</span>
+        </Link>
+        <Link to="/?view=theme-manage" className={location.pathname === "/" && location.search.includes("theme-manage") ? "active" : undefined}>
+          <span aria-hidden>▤</span>
+          <span>{t("nav.settings")}</span>
+        </Link>
+        {showAdmin && (
+          <a href={getAdminUrl()}>
+            <span aria-hidden>⌘</span>
+            <span>{t("nav.admin")}</span>
+          </a>
+        )}
+      </nav>
       {colorsMounted && (
         <Suspense fallback={null}>
           <div className="terminal-bar-picker">
