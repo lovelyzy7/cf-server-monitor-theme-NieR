@@ -252,7 +252,8 @@ const MiniHealth = memo(function MiniHealth({
     <div
       className="mini-node-health"
       data-ping-state={ping.loadState ?? "ready"}
-      title={pingError && (ping.lastValue != null || ping.loss != null) ? t("card.homePing.refreshFail") : undefined}
+      onPointerEnter={(event) => event.stopPropagation()}
+      onPointerMove={(event) => event.stopPropagation()}
     >
       <div className="mini-node-health-item">
         <div className="mini-node-health-head">

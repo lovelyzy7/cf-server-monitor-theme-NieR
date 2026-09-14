@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
@@ -6,7 +6,7 @@ import { useCarrierNames, usePublicConfig } from "@/hooks/usePublicConfig";
 import { useLocalThemeSettings } from "@/hooks/useThemeSettings";
 import { clearViewModeOverride } from "@/hooks/useViewMode";
 import { usePreferences } from "@/hooks/usePreferences";
-import { useLanguage } from "@/hooks/useLanguage";
+import { useLanguage, type I18nKey } from "@/hooks/useLanguage";
 import { getNodes, saveThemeOptions } from "@/services/api";
 import { getJwtToken } from "@/services/cfsm/config";
 import { ApiRequestError } from "@/services/cfsm/http";
@@ -48,7 +48,11 @@ const LIST_COLUMN_OPTIONS = [
   { key: "life", label: "list.uptime" },
 ] as const;
 
-const GRID_COLUMN_OPTIONS = [0, 1, 2, 3, 4, 5, 6] as const;
+/** 平方数分布：N 个按钮排进 ceil(√N) 列（如 4→2×2、7→3×3）。 */
+function squareGridColumns(count: number): CSSProperties {
+  const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
+  return { gridTemplateColumns: `repeat(${columns}, 1fr)` };
+}
 
 /** 本页管理的设置键（草稿与签名都从它派生）。 */
 function pickDraft(s: ResolvedThemeSettings) {
@@ -170,12 +174,7 @@ export function ThemeManage() {
     [availableGroups, draft.homeGroupOrder],
   );
   const [dragGroup, setDragGroup] = useState<string | null>(null);
-  // 卡片布局：先选列数、点确认才写入草稿。
-  const [pendingColumns, setPendingColumns] = useState<number>(() => sourceSettings.gridColumns);
   // 草稿列数被重置/回流时同步待选值。
-  useEffect(() => {
-    setPendingColumns(draft.gridColumns);
-  }, [draft.gridColumns]);
   const dropGroupOn = (target: string) => {
     if (!dragGroup || dragGroup === target) return;
     const next = [...draft.homeGroupOrder];
@@ -303,7 +302,7 @@ export function ThemeManage() {
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
         <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.defaultAppearance")}</h2>
-        <div className="tab-bar">
+        <div className="tab-bar" style={squareGridColumns(APPEARANCE_OPTIONS.length)}>
           {APPEARANCE_OPTIONS.map((option) => (
             <button
               key={option.value}
@@ -324,7 +323,7 @@ export function ThemeManage() {
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
         <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.cardView")}</h2>
         {/* 桌面端与移动端合并为一组：四个选项对称分布；移动端选到 LIST 时自动回退小卡片。 */}
-        <div className="tab-bar">
+        <div className="tab-bar" style={squareGridColumns(VIEW_MODE_OPTIONS.length)}>
           {VIEW_MODE_OPTIONS.map((option) => (
             <button key={option.value} type="button" className={clsx("tab-btn", draft.desktopNodeViewMode === option.value && "active")} onClick={() => applyNodeViewMode(option.value)}>
               {t(option.label)}
@@ -338,17 +337,17 @@ export function ThemeManage() {
         <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.homeSort")}</h2>
         <div style={{ marginTop: 8 }}>
           <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("settings.defaultSort")}</span>
-          <div className="tab-bar">
+          <div className="tab-bar" style={squareGridColumns(HOME_SORT_FIELDS.length)}>
             {HOME_SORT_FIELDS.map((option) => (
               <button key={option} type="button" className={clsx("tab-btn", draft.homeSortField === option && "active")} onClick={() => patch("homeSortField", option)}>
-                {HOME_SORT_FIELD_LABELS[option]}
+                {t(HOME_SORT_FIELD_LABELS[option] as I18nKey)}
               </button>
             ))}
           </div>
         </div>
         <div style={{ marginTop: 8 }}>
           <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("settings.defaultDir")}</span>
-          <div className="tab-bar">
+          <div className="tab-bar" style={squareGridColumns(2)}>
             <button type="button" className={clsx("tab-btn", draft.homeSortDirection === "asc" && "active")} onClick={() => patch("homeSortDirection", "asc")}>
               {t("sort.asc")}
             </button>
@@ -367,36 +366,6 @@ export function ThemeManage() {
         <ToggleRow label={t("settings.showCardGroup")} checked={draft.showCardGroup} onPatch={(v) => patch("showCardGroup", v)} />
       </div>
 
-      <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.cardLayout")}</h2>
-        <div className="tab-bar">
-          {GRID_COLUMN_OPTIONS.map((count) => (
-            <button key={count} type="button" className={clsx("tab-btn", pendingColumns === count && "active")} onClick={() => setPendingColumns(count)}>
-              {count === 0 ? t("settings.auto") : `${count} ${t("settings.cols")}`}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            className="theme-manage-button is-compact"
-            onClick={() => {
-              patch("gridColumns", pendingColumns);
-              // 确认即持久化到本机，刷新页面后布局仍生效。
-              const current = getLocalThemeSettings() as Record<string, unknown>;
-              saveLocalThemeSettings({ ...current, gridColumns: pendingColumns } as Parameters<typeof saveLocalThemeSettings>[0]);
-            }}
-          >
-            {t("common.confirm")}
-          </button>
-          <span style={{ fontSize: 11, color: "var(--fg-mid)" }}>
-            {draft.gridColumns === pendingColumns ? t("common.applied") : t("common.notApplied")}
-          </span>
-        </div>
-        <p style={{ fontSize: 11, color: "var(--fg-mid)", marginTop: 8 }}>
-          {t("settings.cardLayoutHint")}
-        </p>
-      </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
         <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.groupOrder")}</h2>
@@ -450,7 +419,7 @@ export function ThemeManage() {
         <ToggleRow label={t("settings.fakePing")} desc={t("settings.fakePingDesc")} checked={draft.fakePingForUnbound} onPatch={(v) => patch("fakePingForUnbound", v)} />
         <div style={{ marginTop: 8 }}>
           <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("settings.defaultLine")}</span>
-          <div className="tab-bar">
+          <div className="tab-bar" style={squareGridColumns(pingTasks.length)}>
             {pingTasks.map((task) => (
               <button key={task.id} type="button" className={clsx("tab-btn", draft.homepageDefaultPingTaskId === task.id && "active")} onClick={() => patch("homepageDefaultPingTaskId", task.id)}>
                 {task.name}

@@ -401,17 +401,11 @@ function CompactNodeInfoStrip({
       {showTrafficTotal && (
         <CompactInfoTile label={t("card.totalTraffic")} color="var(--fg-dark)">
           <div className="compact-traffic-total">
-            <span className="compact-traffic-rows">
-              <span className="compact-traffic-row">
-                <span className="is-up" aria-hidden>↑</span>
-                <span className="tabular">{formatBytes(node.trafficUp)}</span>
-              </span>
-              <span className="compact-traffic-row">
-                <span className="is-down" aria-hidden>↓</span>
-                <span className="tabular">{formatBytes(node.trafficDown)}</span>
-              </span>
-            </span>
+            <span className="compact-traffic-arrow is-up" aria-hidden>↑</span>
             <CompactRateSpark samples={rateSamples} />
+            <span className="compact-traffic-value tabular">{formatBytes(node.trafficUp)}</span>
+            <span className="compact-traffic-arrow is-down" aria-hidden>↓</span>
+            <span className="compact-traffic-value tabular">{formatBytes(node.trafficDown)}</span>
           </div>
         </CompactInfoTile>
       )}
@@ -487,7 +481,8 @@ const CompactNodeHealth = memo(function CompactNodeHealth({
     <div
       className="compact-node-bottom"
       data-ping-state={ping.loadState ?? "ready"}
-      title={pingError && (ping.lastValue != null || ping.loss != null) ? t("card.homePing.refreshFail") : undefined}
+      onPointerEnter={(event) => event.stopPropagation()}
+      onPointerMove={(event) => event.stopPropagation()}
     >
       <CompactHealthItem icon={<span aria-hidden>◔</span>} label={t("ping.latency")} value={ping.lastValue != null ? Math.round(ping.lastValue).toString() : emptyText} unit={ping.lastValue != null ? "ms" : undefined} color={latencyColor}>
         <HealthBars buckets={pingBuckets} kind="latency" />

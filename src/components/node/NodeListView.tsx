@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { memo, useCallback, useMemo, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "react-router-dom";
 import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
@@ -9,10 +9,9 @@ import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { usePreferences } from "@/hooks/usePreferences";
 import { getLocalThemeSettings, saveLocalThemeSettings } from "@/services/themeSettingsStore";
 import { useMetricColorsVersion } from "@/hooks/useMetricColors";
-import { buildPingBuckets } from "@/hooks/usePingOverview";
+import { HOMEPAGE_PING_BUCKET_COUNT } from "@/hooks/usePingOverview";
 import { setListNodeOrder } from "@/services/listNodeOrderStore";
 import { useNieRHoverLabel } from "@/components/ui/NieRHoverLabel";
-import type { PingOverviewItem } from "@/types/cfsm";
 import { formatBytes } from "@/utils/format";
 import { speedRateColor } from "@/utils/metricTone";
 import { CanvasStrip } from "./CanvasStrip";
@@ -185,7 +184,7 @@ function ListLatency({
   hasRealHomepagePingBinding,
   pingIsAssigned,
   latencyColor,
-  pingItem,
+  buckets,
   redrawKey,
 }: {
   latency: number | null;
@@ -193,54 +192,29 @@ function ListLatency({
   hasRealHomepagePingBinding: boolean;
   pingIsAssigned: boolean;
   latencyColor: string;
-  pingItem: PingOverviewItem;
+  buckets: Parameters<typeof LatencyBars>[0]["buckets"];
   redrawKey: string;
 }) {
   const { t } = useLanguage();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const cellRef = useRef<HTMLDivElement | null>(null);
-  const [cellWidth, setCellWidth] = useState(0);
-  useEffect(() => {
-    const el = cellRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect.width ?? 0;
-      setCellWidth((prev) => (Math.abs(prev - width) > 2 ? width : prev));
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  // 列宽越大展示越多采样：默认列宽（120px）显示 20 柱 = 最近 2 小时；
-  // 加宽到 180px 显示 30 柱 = 最多 3 小时；拖窄只保留近期样本。
-  // 每柱固定 6 分钟，按列宽重建桶（窗口随柱数一起变，保证时间跨度真实变化）。
-  const bucketCount =
-    cellWidth > 0 ? Math.max(10, Math.min(LIST_PING_MAX_BUCKETS, Math.round(cellWidth / 6))) : LIST_PING_DEFAULT_BUCKETS;
-  const buckets = useMemo(
-    () => buildPingBuckets(pingItem, bucketCount, Date.now(), undefined, bucketCount * 6 * 60_000),
-    [pingItem, bucketCount],
-  );
   const state = resolveListPingState(loadState, hasRealHomepagePingBinding, pingIsAssigned);
   const status = formatListPingStatus(latency, state, t);
   const hoveredBucket = hoveredIndex == null ? null : (buckets[hoveredIndex] ?? null);
   const tooltip = hoveredBucket ? formatHealthBucketTooltip(hoveredBucket, "latency", t) : null;
 
   return (
-    <div ref={cellRef} className="node-list-latency" data-ping-state={state} aria-label={`${t("ping.latency")} ${status.ariaText}`}>
+    <div className="node-list-latency" data-ping-state={state} aria-label={`${t("ping.latency")} ${status.ariaText}`}>
       <span className="node-list-latency-value tabular" style={{ color: latencyColor }} title={status.title}>
         {status.visibleText}
         {latency != null && <small>ms</small>}
       </span>
       <span className="node-list-latency-bars">
-        <LatencyBars buckets={buckets} redrawKey={`${redrawKey}:${bucketCount}`} height={14} onHoverIndex={setHoveredIndex} />
+        <LatencyBars buckets={buckets} redrawKey={redrawKey} height={14} onHoverIndex={setHoveredIndex} />
         <HealthBucketTooltip text={tooltip} index={hoveredIndex} count={buckets.length} />
       </span>
     </div>
   );
 }
-
-/** LIST 网络列：默认列宽 20 柱（2 小时），加宽最多 30 柱（3 小时）。 */
-const LIST_PING_DEFAULT_BUCKETS = 20;
-const LIST_PING_MAX_BUCKETS = 30;
 
 const NodeRow = memo(function NodeRow({
   uuid,
@@ -266,7 +240,7 @@ const NodeRow = memo(function NodeRow({
   const { resolvedAppearance } = usePreferences();
   const colorsVersion = useMetricColorsVersion();
   const redrawKey = `${resolvedAppearance}:${colorsVersion}`;
-  const model = useNodeCardModel(uuid);
+  const model = useNodeCardModel(uuid, { pingBucketCount: HOMEPAGE_PING_BUCKET_COUNT });
 
   if (!model.node) {
     return <div className="node-list-row" aria-busy style={{ minHeight: 40 }} />;
@@ -276,6 +250,7 @@ const NodeRow = memo(function NodeRow({
     node,
     traffic,
     ping,
+    pingBuckets,
     footerTags,
     uptime,
     renewalPrice,
@@ -409,7 +384,7 @@ const NodeRow = memo(function NodeRow({
             hasRealHomepagePingBinding={hasRealHomepagePingBinding}
             pingIsAssigned={ping.isAssigned}
             latencyColor={latencyColor}
-            pingItem={ping}
+            buckets={pingBuckets}
             redrawKey={redrawKey}
           />
         </div>
@@ -436,13 +411,18 @@ export function NodeListView({ uuids, dragReorderEnabled }: { uuids: string[]; d
       return;
     }
     event.dataTransfer.effectAllowed = "move";
+    // Firefox 必须 setData 才会启动拖拽。
+    event.dataTransfer.setData("text/plain", uuid);
     setDragUuid(uuid);
   }, []);
 
   const handleDragEnd = useCallback(() => setDragUuid(null), []);
 
   const handleDragOver = useCallback((uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => {
-    if (dragUuid != null && dragUuid !== uuid) event.preventDefault();
+    if (dragUuid != null && dragUuid !== uuid) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+    }
   }, [dragUuid]);
 
   const handleDrop = useCallback((targetUuid: string, event: ReactDragEvent<HTMLAnchorElement>) => {

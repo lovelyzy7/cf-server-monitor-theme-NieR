@@ -29,6 +29,7 @@ import { useHomeSort } from "@/hooks/useHomeSort";
 import { useHomeNodeOrder } from "@/hooks/useHomeNodeOrder";
 import { usePacedRate } from "@/hooks/usePacedRate";
 import { HomeSortControl } from "./HomeSortControl";
+import { HomeGridControl } from "./HomeGridControl";
 import { CompactNodeCard } from "./CompactNodeCard";
 import { MiniNodeCard } from "./MiniNodeCard";
 import { NodeCardUuid } from "./NodeCard";
@@ -397,12 +398,13 @@ export function NodeGrid() {
   return (
     <>
       {homeHeader}
-      {(showGroupTabs || showHomeSort) && (
-        <div className="home-controls-bar">
-          {showGroupTabs && <GroupTabs groups={groupOptions} selectedGroup={selectedGroup} onSelectGroup={setSelectedGroup} />}
+      <div className="home-controls-bar">
+        {showGroupTabs && <GroupTabs groups={groupOptions} selectedGroup={selectedGroup} onSelectGroup={setSelectedGroup} />}
+        <div className="home-controls-right">
+          <HomeGridControl />
           {showHomeSort && <HomeSortControl state={sort} />}
         </div>
-      )}
+      </div>
       {showRegionBar && <RegionTabs regions={regionOptions} selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} />}
       {isList ? <NodeListView uuids={orderedUuids} dragReorderEnabled={manualOrderActive} /> : gridElement}
     </>
