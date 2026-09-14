@@ -28,6 +28,7 @@ import { formatByteRateLabel, formatBytes, formatTrafficRateLabel } from "@/util
 import { historyChartRangeSeconds, historyCoverageLabel } from "@/utils/historyRange";
 import { resolveLoadRecordTotals } from "@/utils/loadMetrics";
 import { usePreferences } from "@/hooks/usePreferences";
+import { useLanguage, type I18nKey } from "@/hooks/useLanguage";
 import type { LoadRecord, NodeMetrics } from "@/types/cfsm";
 
 const LOAD_HISTORY_SAMPLE_LIMIT = 360;
@@ -49,18 +50,18 @@ const CONNECTION_KEYS = ["connections", "udp"];
 const CONNECTION_COLORS = [CHART_PALETTE.memory, CHART_PALETTE.cpu];
 const PROCESS_KEYS = ["process"];
 const PROCESS_COLORS = [CHART_PALETTE.warning];
-const SERIES_LABELS: Record<string, string> = {
-  cpu: "CPU",
-  ram: "内存",
-  swap: "Swap",
-  disk: "磁盘",
-  diskRead: "读取",
-  diskWrite: "写入",
-  netIn: "下行",
-  netOut: "上行",
-  connections: "TCP",
-  udp: "UDP",
-  process: "进程",
+const SERIES_LABELS: Record<string, I18nKey> = {
+  cpu: "detail.cpu",
+  ram: "chart.series.ram",
+  swap: "chart.series.swap",
+  disk: "chart.series.disk",
+  diskRead: "chart.series.read",
+  diskWrite: "chart.series.write",
+  netIn: "chart.series.in",
+  netOut: "chart.series.out",
+  connections: "chart.series.tcp",
+  udp: "chart.series.udp",
+  process: "chart.series.proc",
 };
 const LOAD_INTERPOLATE_KEYS = [
   "cpu", "ram", "swap", "disk", "diskRead", "diskWrite",
@@ -101,14 +102,15 @@ function downsamplePoints(points: ChartPoint[], limit: number) {
   });
 }
 
-function formatRangeSummary(hours: number) {
-  if (hours === 0) return "实时";
-  if (hours % 24 === 0) return `${hours / 24} 天`;
-  return `${hours} 小时`;
+function formatRangeSummary(hours: number, t: (key: I18nKey) => string) {
+  if (hours === 0) return t("common.realtime");
+  if (hours % 24 === 0) return `${hours / 24} ${t("chart.days")}`;
+  return `${hours} ${t("chart.hours")}`;
 }
 
-function getSeriesLabel(key: string) {
-  return SERIES_LABELS[key] ?? key;
+function getSeriesLabel(key: string, t: (key: I18nKey) => string) {
+  const label = SERIES_LABELS[key];
+  return label ? t(label) : key;
 }
 
 function pointFromNode(node: NodeMetrics): ChartPoint {
@@ -253,6 +255,7 @@ const ChartCard = memo(function ChartCard({
   fillAllSeries?: boolean;
   accent?: string;
 }) {
+  const { t } = useLanguage();
   const { w, h, ref: chartSizeRef } = useResponsiveChartSize("grid");
   const dataRef = useRef<uPlot.AlignedData>([[]]);
   const [tooltip, setTooltip] = useState<ChartTooltipState>({
@@ -272,7 +275,7 @@ const ChartCard = memo(function ChartCard({
       dataRef, rangeHours, estimatedWidth: 176, setTooltip,
       buildRows: (idx) =>
         keys.map((key, keyIndex) => ({
-          label: getSeriesLabel(key),
+          label: getSeriesLabel(key, t),
           value: formatTooltipValue(key, dataRef.current[keyIndex + 1]?.[idx] as number | null | undefined, unit),
           color: colors[keyIndex] ?? colors[0],
         })),
@@ -286,7 +289,7 @@ const ChartCard = memo(function ChartCard({
         setCursor: [tooltip.onSetCursor],
       },
     };
-  }, [colors, keys, baseOptions, rangeHours, unit]);
+  }, [colors, keys, baseOptions, rangeHours, unit, t]);
 
   const chartOptions = useMemo<uPlot.Options>(
     () => ({ ...enhancedOptions, width: w, height: h }) as uPlot.Options,
@@ -316,6 +319,7 @@ const ChartCard = memo(function ChartCard({
 });
 
 export function LoadChart({ uuid, hours, active = true }: { uuid: string; hours: number; active?: boolean }) {
+  const { t } = useLanguage();
   const queryHours = hours === 0 ? 1 : hours;
   const { data, isError, isFetching, isLoading, refetch } = useLoadRecords(uuid, queryHours, active);
   const isRealtime = hours === 0;
@@ -387,7 +391,7 @@ export function LoadChart({ uuid, hours, active = true }: { uuid: string; hours:
     return historyPoints;
   }, [historyPoints, isRealtime, realtimePoints]);
 
-  const rangeSummary = formatRangeSummary(hours);
+  const rangeSummary = formatRangeSummary(hours, t);
   const latestHistoryRecord = historyRecords[historyRecords.length - 1]?.record;
   const latestHistoryTotals = latestHistoryRecord ? resolveLoadRecordTotals(latestHistoryRecord, totalFallbacks) : null;
   const latestDiskIo = useMemo(() => {
@@ -424,21 +428,21 @@ export function LoadChart({ uuid, hours, active = true }: { uuid: string; hours:
     [data, isRealtime],
   );
   const coverageLabel = useMemo(
-    () => (isRealtime ? null : historyCoverageLabel(data, points[0]?.time, points[points.length - 1]?.time)),
-    [data, isRealtime, points],
+    () => (isRealtime ? null : historyCoverageLabel(data, points[0]?.time, points[points.length - 1]?.time, t)),
+    [data, isRealtime, points, t],
   );
 
   if (isLoading) {
-    return <InstanceChartLoading title="负载图表" />;
+    return <InstanceChartLoading title={t("chart.loadTitle")} />;
   }
 
   if (isError && !points.length) {
     return (
-      <InstancePanel title="负载图表">
+      <InstancePanel title={t("chart.loadTitle")}>
         <div className="instance-empty">
-          <span>负载历史加载失败</span>{" "}
+          <span>{t("chart.loadFail")}</span>{" "}
           <button type="button" className="instance-toggle-button" onClick={() => void refetch()} disabled={isFetching} aria-busy={isFetching}>
-            {isFetching ? "重试中" : "重试"}
+            {isFetching ? t("chart.retrying") : t("common.retry")}
           </button>
         </div>
       </InstancePanel>
@@ -447,28 +451,28 @@ export function LoadChart({ uuid, hours, active = true }: { uuid: string; hours:
 
   if (!points.length) {
     return (
-      <InstancePanel title="负载图表">
-        <div className="instance-empty">暂无负载历史数据</div>
+      <InstancePanel title={t("chart.loadTitle")}>
+        <div className="instance-empty">{t("chart.loadEmpty")}</div>
       </InstancePanel>
     );
   }
 
   return (
     <InstancePanel
-      title="负载图表"
+      title={t("chart.loadTitle")}
       aside={
         <div className="instance-chart-headmeta">
-          <div className="instance-chart-meta" aria-label="图表数据范围">
+          <div className="instance-chart-meta" aria-label={t("chart.range")}>
             <span title={coverageSummary}>
-              <strong>{coverageLabel ?? `覆盖 ${coverageSummary}`}</strong>
+              <strong>{coverageLabel ?? `${t("chart.coverageFull")} ${coverageSummary}`}</strong>
             </span>
             <span>
-              采样 <strong>{sampleSummary}</strong>
+              {t("chart.sampling")} <strong>{sampleSummary}</strong>
             </span>
           </div>
-          <SwitchToggle label="断点连线" active={connectNulls} onToggle={() => setConnectNulls((value) => !value)} />
+          <SwitchToggle label={t("chart.spanGaps")} active={connectNulls} onToggle={() => setConnectNulls((value) => !value)} />
           <button type="button" className="instance-toggle-button" onClick={() => void refetch()} disabled={isFetching} aria-busy={isFetching}>
-            ⟳ {isFetching ? "刷新中" : "刷新"}
+            ⟳ {isFetching ? t("chart.refreshing") : t("common.refresh")}
           </button>
           <span className="instance-chart-range-chip">{rangeSummary}</span>
         </div>
@@ -477,36 +481,36 @@ export function LoadChart({ uuid, hours, active = true }: { uuid: string; hours:
       <div className="instance-chart-grid">
         <ChartCard title="CPU" uuid={uuid}
           value={isRealtime && node ? `${node.cpuPct.toFixed(2)}%` : `${(points[points.length - 1]?.cpu ?? 0).toFixed(2)}%`}
-          note="使用率" points={points} keys={CPU_KEYS} colors={CPU_COLORS}
+          note={t("chart.usage")} points={points} keys={CPU_KEYS} colors={CPU_COLORS}
           resolvedAppearance={resolvedAppearance} rangeHours={hours} unit="%" spanGaps={connectNulls} axisKind="percent" xRange={requestedXRange} />
-        <ChartCard title="内存" uuid={uuid}
+        <ChartCard title={t("chart.series.ram")} uuid={uuid}
           value={isRealtime && node ? `${formatBytes(node.ramUsed)} / ${formatBytes(node.ramTotal)}` : latestHistoryRecord && latestHistoryTotals ? `${formatBytes(latestHistoryRecord.ram)} / ${formatBytes(latestHistoryTotals.ramTotal)}` : "—"}
-          note={isRealtime && node ? (node.swapTotal ? `Swap ${formatBytes(node.swapUsed)} / ${formatBytes(node.swapTotal)}` : "Swap 无") : latestHistoryRecord && latestHistoryTotals && latestHistoryTotals.swapTotal > 0 ? `Swap ${formatBytes(latestHistoryRecord.swap)} / ${formatBytes(latestHistoryTotals.swapTotal)}` : "Swap 无"}
+          note={isRealtime && node ? (node.swapTotal ? `Swap ${formatBytes(node.swapUsed)} / ${formatBytes(node.swapTotal)}` : t("chart.swapNone")) : latestHistoryRecord && latestHistoryTotals && latestHistoryTotals.swapTotal > 0 ? `Swap ${formatBytes(latestHistoryRecord.swap)} / ${formatBytes(latestHistoryTotals.swapTotal)}` : t("chart.swapNone")}
           points={points} keys={MEMORY_KEYS} colors={MEMORY_COLORS}
           resolvedAppearance={resolvedAppearance} rangeHours={hours} unit="%" spanGaps={connectNulls} axisKind="percent" xRange={requestedXRange} />
         {hasDiskIo ? (
-          <ChartCard title="磁盘 IO" uuid={uuid}
-            value={latestDiskIo ? `读 ${formatByteRateLabel(latestDiskIo.read)} · 写 ${formatByteRateLabel(latestDiskIo.write)}` : "—"}
-            note={diskUsageLabel === "—" ? "已用空间 —" : `已用 ${diskUsageLabel}`}
+          <ChartCard title={t("chart.diskIO")} uuid={uuid}
+            value={latestDiskIo ? `${t("chart.readShort")} ${formatByteRateLabel(latestDiskIo.read)} · ${t("chart.writeShort")} ${formatByteRateLabel(latestDiskIo.write)}` : "—"}
+            note={diskUsageLabel === "—" ? `${t("chart.usedSpace")} —` : `${t("chart.usedPrefix")} ${diskUsageLabel}`}
             points={points} keys={DISK_IO_KEYS} colors={DISK_IO_COLORS}
             resolvedAppearance={resolvedAppearance} rangeHours={hours} spanGaps={connectNulls} axisKind="byteRate" axisSize={72} xRange={requestedXRange} fillAllSeries accent={CHART_PALETTE.disk} />
         ) : (
-          <ChartCard title="磁盘" uuid={uuid} value={diskUsageLabel} note="已用空间"
+          <ChartCard title={t("chart.series.disk")} uuid={uuid} value={diskUsageLabel} note={t("chart.usedSpace")}
             points={points} keys={DISK_KEYS} colors={DISK_COLORS}
             resolvedAppearance={resolvedAppearance} rangeHours={hours} unit="%" spanGaps={connectNulls} axisKind="percent" xRange={requestedXRange} />
         )}
-        <ChartCard title="网络" uuid={uuid}
+        <ChartCard title={t("chart.net")} uuid={uuid}
           value={isRealtime && node ? `${formatTrafficRateLabel(node.netDown)} / ${formatTrafficRateLabel(node.netUp)}` : latestHistoryRecord ? `${formatTrafficRateLabel(latestHistoryRecord.net_in ?? 0)} / ${formatTrafficRateLabel(latestHistoryRecord.net_out ?? 0)}` : "—"}
           note={<span style={{ display: "inline-flex", gap: 8 }}><span>↓ {isRealtime && node ? formatBytes(node.trafficDown) : latestHistoryRecord ? formatBytes(latestHistoryRecord.net_total_down ?? 0) : "—"}</span><span>↑ {isRealtime && node ? formatBytes(node.trafficUp) : latestHistoryRecord ? formatBytes(latestHistoryRecord.net_total_up ?? 0) : "—"}</span></span>}
           points={points} keys={NETWORK_KEYS} colors={NETWORK_COLORS}
           resolvedAppearance={resolvedAppearance} rangeHours={hours} spanGaps={connectNulls} axisKind="network" axisSize={78} xRange={requestedXRange} />
-        <ChartCard title="连接数" uuid={uuid}
+        <ChartCard title={t("detail.conns")} uuid={uuid}
           value={isRealtime && node ? `TCP ${node.connectionsTcp} / UDP ${node.connectionsUdp}` : latestHistoryRecord ? `TCP ${Math.round(latestHistoryRecord.connections ?? 0)} / UDP ${Math.round(latestHistoryRecord.connections_udp ?? 0)}` : "—"}
-          note="连接" points={points} keys={CONNECTION_KEYS} colors={CONNECTION_COLORS}
+          note={t("chart.conn")} points={points} keys={CONNECTION_KEYS} colors={CONNECTION_COLORS}
           resolvedAppearance={resolvedAppearance} rangeHours={hours} spanGaps={connectNulls} axisKind="count" xRange={requestedXRange} />
-        <ChartCard title="进程" uuid={uuid}
+        <ChartCard title={t("chart.proc")} uuid={uuid}
           value={isRealtime && node ? node.process.toString() : latestHistoryRecord ? Math.round(latestHistoryRecord.process ?? 0).toString() : "—"}
-          note={isRealtime && node ? `负载 ${node.load1.toFixed(2)} | ${node.load5.toFixed(2)} | ${node.load15.toFixed(2)}` : latestHistoryRecord ? `负载 ${(latestHistoryRecord.load ?? 0).toFixed(2)}` : "—"}
+          note={isRealtime && node ? `${t("chart.loadAt")} ${node.load1.toFixed(2)} | ${node.load5.toFixed(2)} | ${node.load15.toFixed(2)}` : latestHistoryRecord ? `${t("chart.loadAt")} ${(latestHistoryRecord.load ?? 0).toFixed(2)}` : "—"}
           points={points} keys={PROCESS_KEYS} colors={PROCESS_COLORS}
           resolvedAppearance={resolvedAppearance} rangeHours={hours} spanGaps={connectNulls} axisKind="count" xRange={requestedXRange} />
       </div>

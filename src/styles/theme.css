@@ -3732,8 +3732,8 @@ body .metric-color-swatch input {
   .terminal-bar .right .terminal-btn-admin {
     display: none;
   }
-  .terminal-btn-theme,
-  .terminal-menu {
+  .terminal-bar .terminal-btn-theme,
+  .terminal-bar .terminal-menu {
     display: inline-flex;
   }
 
@@ -3857,4 +3857,81 @@ body .metric-color-swatch input {
   .terminal-bar .right .terminal-btn-theme { order: 3; }
   .terminal-bar .right .terminal-btn-lang { order: 4; }
   .terminal-bar .right .terminal-menu { order: 5; }
+}
+
+/* ====================================================================
+ * 39. 本轮：PC 下拉键隐藏、指标单行对齐、COMPACT 单列、LIST 网络列、火花线
+ * ==================================================================== */
+
+/* PC 端隐藏下拉栏按钮与主题键（此前被 .terminal-bar .control-button 覆盖导致误显示） */
+.terminal-bar .terminal-menu {
+  display: none;
+}
+
+/* 大卡/详情：标签贴左、条 1fr、右侧值固定列宽统一条长，值缩字号 */
+.metric-row {
+  grid-template-columns: auto 1fr 148px;
+}
+.metric-row .metric-value {
+  white-space: nowrap;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.node-card .kv dt {
+  white-space: nowrap;
+  line-height: 1.5;
+}
+.node-card .kv dd {
+  line-height: 1.5;
+}
+
+/* COMPACT：CPU/内存/SWAP/磁盘/负载 五行单列，右侧值缩字号 */
+.compact-node-vitals {
+  grid-template-columns: 1fr;
+  row-gap: 3px;
+}
+.compact-node-gauge-head strong {
+  font-size: 11px;
+}
+
+/* COMPACT 累计流量：左符号 | 中火花线 | 右数值 */
+.compact-traffic-total {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.compact-traffic-arrows {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.15;
+  font-size: 10px;
+  flex: none;
+}
+.compact-traffic-arrows .is-up { color: var(--fg-tone-up, var(--fg-dark)); }
+.compact-traffic-arrows .is-down { color: var(--fg-tone-down, var(--fg-dark)); }
+.compact-traffic-spark {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 18px;
+  display: block;
+}
+.compact-traffic-values {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.2;
+  text-align: right;
+  white-space: nowrap;
+  font-size: 11px;
+  flex: none;
+}
+
+/* LIST 网络列：延迟柱常显；拖动时显示引导线 */
+.node-list-latency-bars {
+  display: block;
+}
+.node-list-resize-handle.is-dragging::after {
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
 }

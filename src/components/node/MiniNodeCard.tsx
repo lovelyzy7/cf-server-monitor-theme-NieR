@@ -7,6 +7,7 @@ import { IpStackBadges } from "./IpStackBadges";
 import { HealthBucketTooltip } from "./HealthBucketTooltip";
 import { resolveTouchBucketIndex, TOUCH_BUCKET_HOLD_MS } from "./touchBucketPick";
 import { useNodeCardModel } from "@/hooks/useNodeCardModel";
+import { useLanguage } from "@/hooks/useLanguage";
 import { HOMEPAGE_PING_BUCKET_COUNT } from "@/hooks/usePingOverview";
 import { speedRateColor } from "@/utils/metricTone";
 import { supportsFineHover } from "@/utils/mediaQuery";
@@ -24,7 +25,8 @@ type MiniNode = NodeInfo & NodeMetrics;
 type MiniTag = { label: string; color: string };
 
 function MiniHeader({ node, osName }: { node: MiniNode; osName: string }) {
-  const detailLabels = nodeDetailLinkLabels(node.name, osName);
+  const { t } = useLanguage();
+  const detailLabels = nodeDetailLinkLabels(node.name, osName, t);
   const detailHref = `/server/${encodeURIComponent(node.uuid)}`;
   return (
     <header className="mini-node-header">
@@ -102,13 +104,14 @@ function MiniMetricBar({
 }
 
 function MiniVitals({ node, loadFraction }: { node: MiniNode; loadFraction: number }) {
+  const { t } = useLanguage();
   return (
     <div className="mini-node-vitals">
-      <MiniMetricBar icon={<span aria-hidden>▣</span>} label="CPU" valueText={node.cpuPct.toFixed(node.cpuPct >= 10 ? 0 : 1)} unit="%" detail={`${node.cpu_cores || 0} 核`} fraction={node.cpuPct / 100} paint="var(--progress-cpu)" />
-      <MiniMetricBar icon={<span aria-hidden>▤</span>} label="内存" valueText={node.ramPct.toFixed(node.ramPct >= 10 ? 0 : 1)} unit="%" detail={`${formatBytes(node.ramUsed)} / ${formatBytes(node.ramTotal)}`} fraction={node.ramPct / 100} paint="var(--progress-memory)" />
-      <MiniMetricBar icon={<span aria-hidden>▤</span>} label="Swap" valueText={node.swapTotal > 0 ? ((node.swapUsed / node.swapTotal) * 100).toFixed(node.swapUsed / node.swapTotal >= 10 ? 0 : 1) : "0"} unit="%" detail={node.swapTotal > 0 ? `${formatBytes(node.swapUsed)} / ${formatBytes(node.swapTotal)}` : "未配置"} fraction={node.swapTotal > 0 ? node.swapUsed / node.swapTotal : 0} paint="var(--progress-swap)" />
-      <MiniMetricBar icon={<span aria-hidden>◫</span>} label="磁盘" valueText={node.diskPct.toFixed(node.diskPct >= 10 ? 0 : 1)} unit="%" detail={`${formatBytes(node.diskUsed)} / ${formatBytes(node.diskTotal)}`} fraction={node.diskPct / 100} paint="var(--progress-disk)" />
-      <MiniMetricBar icon={<span aria-hidden>≋</span>} label="负载" valueText={node.load1.toFixed(2)} fraction={loadFraction} paint="var(--progress-load)" />
+      <MiniMetricBar icon={<span aria-hidden>▣</span>} label="CPU" valueText={node.cpuPct.toFixed(node.cpuPct >= 10 ? 0 : 1)} unit="%" detail={`${node.cpu_cores || 0} ${t("common.cores")}`} fraction={node.cpuPct / 100} paint="var(--progress-cpu)" />
+      <MiniMetricBar icon={<span aria-hidden>▤</span>} label={t("card.mem")} valueText={node.ramPct.toFixed(node.ramPct >= 10 ? 0 : 1)} unit="%" detail={`${formatBytes(node.ramUsed)} / ${formatBytes(node.ramTotal)}`} fraction={node.ramPct / 100} paint="var(--progress-memory)" />
+      <MiniMetricBar icon={<span aria-hidden>▤</span>} label="Swap" valueText={node.swapTotal > 0 ? ((node.swapUsed / node.swapTotal) * 100).toFixed(node.swapUsed / node.swapTotal >= 10 ? 0 : 1) : "0"} unit="%" detail={node.swapTotal > 0 ? `${formatBytes(node.swapUsed)} / ${formatBytes(node.swapTotal)}` : t("common.unconfigured")} fraction={node.swapTotal > 0 ? node.swapUsed / node.swapTotal : 0} paint="var(--progress-swap)" />
+      <MiniMetricBar icon={<span aria-hidden>◫</span>} label={t("card.disk")} valueText={node.diskPct.toFixed(node.diskPct >= 10 ? 0 : 1)} unit="%" detail={`${formatBytes(node.diskUsed)} / ${formatBytes(node.diskTotal)}`} fraction={node.diskPct / 100} paint="var(--progress-disk)" />
+      <MiniMetricBar icon={<span aria-hidden>≋</span>} label={t("card.load")} valueText={node.load1.toFixed(2)} fraction={loadFraction} paint="var(--progress-load)" />
     </div>
   );
 }
@@ -138,26 +141,28 @@ function MiniFlowRow({
 }
 
 function MiniFlow({ node, upRate, downRate }: { node: MiniNode; upRate: ByteRateDisplay; downRate: ByteRateDisplay }) {
+  const { t } = useLanguage();
   return (
     <div className="mini-node-flow">
-      <div className="mini-node-flow-group" aria-label="实时网速">
-        <MiniFlowRow icon="↑" value={upRate.value} unit={upRate.unit} color={speedRateColor(upRate.unit)} title="实时上行" />
-        <MiniFlowRow icon="↓" value={downRate.value} unit={downRate.unit} color={speedRateColor(downRate.unit)} title="实时下行" />
+      <div className="mini-node-flow-group" aria-label={t("card.liveRate")}>
+        <MiniFlowRow icon="↑" value={upRate.value} unit={upRate.unit} color={speedRateColor(upRate.unit)} title={t("card.liveUp")} />
+        <MiniFlowRow icon="↓" value={downRate.value} unit={downRate.unit} color={speedRateColor(downRate.unit)} title={t("card.liveDown")} />
       </div>
-      <div className="mini-node-flow-group" aria-label="累计流量">
-        <MiniFlowRow icon="↑" value={formatBytes(node.trafficUp)} title="累计上行" />
-        <MiniFlowRow icon="↓" value={formatBytes(node.trafficDown)} title="累计下行" />
+      <div className="mini-node-flow-group" aria-label={t("card.totalTraffic")}>
+        <MiniFlowRow icon="↑" value={formatBytes(node.trafficUp)} title={t("card.cumUp")} />
+        <MiniFlowRow icon="↓" value={formatBytes(node.trafficDown)} title={t("card.cumDown")} />
       </div>
     </div>
   );
 }
 
 function MiniHealthBars({ buckets, kind }: { buckets: PingOverviewBucket[]; kind: "latency" | "loss" }) {
+  const { t } = useLanguage();
   const width = Math.max(1, buckets.length * 4 - 1);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const touchHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoveredBucket = hoveredIndex == null ? null : (buckets[hoveredIndex] ?? null);
-  const tooltip = hoveredBucket ? formatHealthBucketTooltip(hoveredBucket, kind) : null;
+  const tooltip = hoveredBucket ? formatHealthBucketTooltip(hoveredBucket, kind, t) : null;
 
   useEffect(
     () => () => {
@@ -240,18 +245,19 @@ const MiniHealth = memo(function MiniHealth({
   pingLoading: boolean;
   pingError: boolean;
 }) {
-  const { text: emptyText } = pingEmptyLabels(hasRealHomepagePingBinding, pingLoading, pingError);
+  const { t } = useLanguage();
+  const { text: emptyText } = pingEmptyLabels(hasRealHomepagePingBinding, t, pingLoading, pingError);
   return (
     <div
       className="mini-node-health"
       data-ping-state={ping.loadState ?? "ready"}
-      title={pingError && (ping.lastValue != null || ping.loss != null) ? "首页 Ping 刷新失败，显示上次数据" : undefined}
+      title={pingError && (ping.lastValue != null || ping.loss != null) ? t("card.homePing.refreshFail") : undefined}
     >
       <div className="mini-node-health-item">
         <div className="mini-node-health-head">
           <span className="mini-node-health-label">
             <span aria-hidden>◔</span>
-            延迟
+            {t("ping.latency")}
           </span>
           <strong className="mini-node-health-value tabular" style={{ color: latencyColor }}>
             {ping.lastValue != null ? (
@@ -270,7 +276,7 @@ const MiniHealth = memo(function MiniHealth({
         <div className="mini-node-health-head">
           <span className="mini-node-health-label">
             <span aria-hidden>⊘</span>
-            丢包
+            {t("ping.loss")}
           </span>
           <strong className="mini-node-health-value tabular" style={{ color: lossColor }}>
             {ping.loss != null ? (
@@ -290,6 +296,7 @@ const MiniHealth = memo(function MiniHealth({
 });
 
 export const MiniNodeCard = memo(function MiniNodeCard({ uuid }: { uuid: string }) {
+  const { t } = useLanguage();
   const model = useNodeCardModel(uuid, { pingBucketCount: HOMEPAGE_PING_BUCKET_COUNT });
 
   if (!model.node) {
@@ -331,8 +338,8 @@ export const MiniNodeCard = memo(function MiniNodeCard({ uuid }: { uuid: string 
       <Link
         to={`/server/${encodeURIComponent(uuid)}`}
         className="card-stretched-link"
-        aria-label={nodeDetailLinkLabels(node.name, osName).ariaLabel}
-        title={nodeDetailLinkLabels(node.name, osName).title}
+        aria-label={nodeDetailLinkLabels(node.name, osName, t).ariaLabel}
+        title={nodeDetailLinkLabels(node.name, osName, t).title}
       />
     </article>
   );

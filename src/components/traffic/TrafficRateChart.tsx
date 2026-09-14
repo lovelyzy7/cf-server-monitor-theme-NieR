@@ -1,3 +1,4 @@
+import { translate } from "@/hooks/useLanguage";
 import { useMemo, useRef, useState } from "react";
 import UplotReact from "uplot-react";
 import type uPlot from "uplot";
@@ -84,10 +85,10 @@ export function TrafficRateChart({
         estimatedWidth: 196,
         setTooltip,
         buildRows: (index) => [
-          { label: "累计上行", value: formatBytes(Number(dataRef.current[1]?.[index] ?? 0)), color: UP_COLOR },
-          { label: "累计下行", value: formatBytes(Number(dataRef.current[2]?.[index] ?? 0)), color: DOWN_COLOR },
-          { label: "上行速率", value: formatByteRateLabel(Number(dataRef.current[3]?.[index] ?? 0)), color: UP_RATE_COLOR },
-          { label: "下行速率", value: formatByteRateLabel(Number(dataRef.current[4]?.[index] ?? 0)), color: DOWN_RATE_COLOR },
+          { label: translate("traffic.cumUp"), value: formatBytes(Number(dataRef.current[1]?.[index] ?? 0)), color: UP_COLOR },
+          { label: translate("traffic.cumDown"), value: formatBytes(Number(dataRef.current[2]?.[index] ?? 0)), color: DOWN_COLOR },
+          { label: translate("traffic.rateUp"), value: formatByteRateLabel(Number(dataRef.current[3]?.[index] ?? 0)), color: UP_RATE_COLOR },
+          { label: translate("traffic.rateDown"), value: formatByteRateLabel(Number(dataRef.current[4]?.[index] ?? 0)), color: DOWN_RATE_COLOR },
         ],
       }),
     [],
@@ -111,17 +112,17 @@ export function TrafficRateChart({
         { scale: "y2", side: 1, stroke: text, grid: { show: false }, ticks: { stroke: text }, size: compact ? 62 : 74, values: (_self, splits) => splits.map(axisRate) },
       ],
       series: [
-        { label: "时间" },
-        { label: "累计上行", scale: "y", stroke: UP_COLOR, width: 1.9, points: { show: false } },
-        { label: "累计下行", scale: "y", stroke: DOWN_COLOR, width: 1.9, points: { show: false } },
-        { label: "上行速率", scale: "y2", stroke: UP_RATE_COLOR, width: 1.1, dash: [6, 4], points: { show: false } },
-        { label: "下行速率", scale: "y2", stroke: DOWN_RATE_COLOR, width: 1.1, dash: [6, 4], points: { show: false } },
+        { label: translate("traffic.time") },
+        { label: translate("traffic.cumUp"), scale: "y", stroke: UP_COLOR, width: 1.9, points: { show: false } },
+        { label: translate("traffic.cumDown"), scale: "y", stroke: DOWN_COLOR, width: 1.9, points: { show: false } },
+        { label: translate("traffic.rateUp"), scale: "y2", stroke: UP_RATE_COLOR, width: 1.1, dash: [6, 4], points: { show: false } },
+        { label: translate("traffic.rateDown"), scale: "y2", stroke: DOWN_RATE_COLOR, width: 1.1, dash: [6, 4], points: { show: false } },
       ],
       hooks: {
         init: [
           (plot) => {
             plot.root.setAttribute("role", "img");
-            plot.root.setAttribute("aria-label", "节点当日流量累计与网速双轴图");
+            plot.root.setAttribute("aria-label", translate("traffic.chartAria"));
           },
           tooltipHooks.onInit,
         ],
@@ -136,10 +137,10 @@ export function TrafficRateChart({
   );
 
   const legend = [
-    { label: "累计上行", color: UP_COLOR },
-    { label: "累计下行", color: DOWN_COLOR },
-    { label: "上行速率", color: UP_RATE_COLOR },
-    { label: "下行速率", color: DOWN_RATE_COLOR },
+    { label: translate("traffic.cumUp"), color: UP_COLOR },
+    { label: translate("traffic.cumDown"), color: DOWN_COLOR },
+    { label: translate("traffic.rateUp"), color: UP_RATE_COLOR },
+    { label: translate("traffic.rateDown"), color: DOWN_RATE_COLOR },
   ];
 
   return (

@@ -23,28 +23,28 @@ import { HOME_SORT_FIELDS, HOME_SORT_FIELD_LABELS } from "@/utils/homeSort";
 import type { ThemeSettings } from "@/types/cfsm";
 
 const APPEARANCE_OPTIONS = [
-  { value: "light", label: "浅色" },
-  { value: "system", label: "跟随系统" },
-  { value: "dark", label: "深色" },
+  { value: "light", label: "appearance.light" },
+  { value: "system", label: "appearance.system" },
+  { value: "dark", label: "appearance.dark" },
 ] as const;
 const VIEW_MODE_OPTIONS = [
-  { value: "large", label: "大卡片" },
-  { value: "compact", label: "小卡片" },
-  { value: "mini", label: "迷你卡片" },
-  { value: "list", label: "列表" },
+  { value: "large", label: "view.large" },
+  { value: "compact", label: "view.compact" },
+  { value: "mini", label: "view.mini" },
+  { value: "list", label: "view.list" },
 ] as const;
 
 /** 表格（LIST 视图）可开关的列；节点列始终显示。 */
 const LIST_COLUMN_OPTIONS = [
-  { key: "os", label: "系统" },
+  { key: "os", label: "list.os" },
   { key: "cpu", label: "CPU" },
-  { key: "mem", label: "内存" },
-  { key: "disk", label: "磁盘" },
-  { key: "load", label: "负载" },
-  { key: "live", label: "实时" },
-  { key: "traffic", label: "流量" },
-  { key: "net", label: "网络" },
-  { key: "life", label: "运行" },
+  { key: "mem", label: "list.mem" },
+  { key: "disk", label: "list.disk" },
+  { key: "load", label: "list.load" },
+  { key: "live", label: "list.live" },
+  { key: "traffic", label: "list.traffic" },
+  { key: "net", label: "list.net" },
+  { key: "life", label: "list.uptime" },
 ] as const;
 
 const GRID_COLUMN_OPTIONS = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -182,9 +182,9 @@ export function ThemeManage() {
     setMessage(null);
     try {
       saveLocalThemeSettings({ ...getLocalThemeSettings(), ...draftThemeSettings });
-      setMessage("主题设置已保存到本机浏览器");
+      setMessage(t("manage.saveLocalDone"));
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "保存失败");
+      setError(saveError instanceof Error ? saveError.message : t("manage.saveFail"));
     } finally {
       setSaving(false);
     }
@@ -204,10 +204,10 @@ export function ThemeManage() {
   const handleCopyJson = async () => {
     setError(null);
     if (await copyText(siteDefaultsJson)) {
-      setMessage("配置 JSON 已复制，粘贴到后台「外观设置 → 主题自定义配置」保存即可成为所有设备的默认值");
+      setMessage(t("manage.copyDone"));
     } else {
       setMessage(null);
-      setError("复制失败，请检查浏览器的剪贴板权限");
+      setError(t("manage.copyFail"));
     }
   };
 
@@ -220,17 +220,17 @@ export function ThemeManage() {
       resetLocalThemeSettings();
       seed(normalizeThemeSettings(siteDefaults as unknown as ThemeSettings & Record<string, unknown>));
       void refetchConfig();
-      setMessage("已保存到后端：所有设备与访客都会以这套配置为默认值");
+      setMessage(t("manage.saveSiteDone"));
     } catch (saveError) {
       if (saveError instanceof ApiRequestError && saveError.status === 401) {
-        setError("登录态已失效，请到 /admin 重新登录后再保存到后端（本机设置不受影响）");
+        setError(t("manage.loginExpired"));
       } else if (saveError instanceof ApiRequestError && saveError.status === 403) {
         void refetchConfig();
-        setError("本站需要人机验证：完成弹出的验证后，再点一次「保存到后端」");
+        setError(t("manage.turnstile"));
       } else if (saveError instanceof ApiRequestError && saveError.status === 400) {
-        setError("配置格式被后端拒绝（invalidThemeOptionsFormat），请把这条信息反馈给作者");
+        setError(t("manage.invalidFormat"));
       } else {
-        setError(saveError instanceof Error ? saveError.message : "保存到后端失败");
+        setError(saveError instanceof Error ? saveError.message : t("manage.saveFail"));
       }
     } finally {
       setSavingSite(false);
@@ -246,7 +246,7 @@ export function ThemeManage() {
   const handleRestoreSiteDefaults = () => {
     resetLocalThemeSettings();
     seed(normalizeThemeSettings(withPreferredAppearance(config?.preferredAppearance, config?.theme_settings ?? {})));
-    setMessage("已丢弃本机设置，改用后端当前的配置");
+    setMessage(t("manage.restoreDone"));
     setError(null);
   };
 
@@ -264,15 +264,15 @@ export function ThemeManage() {
       <div className="theme-masthead-topline" style={{ marginTop: 16 }}>
         <Link className="instance-page-back" to="/">{t("common.backHome")}</Link>
         <div className="theme-manage-toolbar-actions">
-          <button type="button" className="theme-manage-button" onClick={handleReset} disabled={!isDirty || saving} title="撤销未保存的改动">重置</button>
-          <button type="button" className="theme-manage-button" onClick={handleRestoreSiteDefaults} disabled={saving} title="丢弃本机设置，改用后端配置">改用后端配置</button>
-          <button type="button" className="theme-manage-button" onClick={handleCopyJson} disabled={saving} title="导出完整配置 JSON，粘到后台主题自定义配置">复制配置 JSON</button>
+          <button type="button" className="theme-manage-button" onClick={handleReset} disabled={!isDirty || saving} title={t("manage.resetHint")}>{t("manage.reset")}</button>
+          <button type="button" className="theme-manage-button" onClick={handleRestoreSiteDefaults} disabled={saving} title={t("manage.restoreSiteHint")}>{t("manage.restoreSite")}</button>
+          <button type="button" className="theme-manage-button" onClick={handleCopyJson} disabled={saving} title={t("manage.copyJsonHint")}>{t("manage.copyJson")}</button>
           <button type="button" className="theme-manage-button is-primary" onClick={() => void handleSaveLocal()} disabled={saving} aria-busy={saving}>
-            {saving ? "保存中…" : "保存到本机"}
+            {saving ? t("manage.saving") : t("manage.saveLocal")}
           </button>
           {canSaveToSite && (
-            <button type="button" className="theme-manage-button is-primary" onClick={() => void handleSaveToSite()} disabled={savingSite} aria-busy={savingSite} title="直接写到后端 theme_options，所有访客生效">
-              {savingSite ? "发布中…" : "保存到后端"}
+            <button type="button" className="theme-manage-button is-primary" onClick={() => void handleSaveToSite()} disabled={savingSite} aria-busy={savingSite} title={t("manage.saveSiteHint")}>
+              {savingSite ? t("manage.publishing") : t("manage.saveSite")}
             </button>
           )}
         </div>
@@ -284,7 +284,7 @@ export function ThemeManage() {
       {error && <div className="banner error">&gt; ERROR :: {error}</div>}
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>默认外观</h2>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.defaultAppearance")}</h2>
         <div className="tab-bar">
           {APPEARANCE_OPTIONS.map((option) => (
             <button
@@ -299,15 +299,15 @@ export function ThemeManage() {
           ))}
         </div>
         <p style={{ fontSize: 11, color: "var(--fg-mid)", marginTop: 8 }}>
-          当前设备正在使用：{appearance === "light" ? "浅色" : appearance === "dark" ? "深色" : "跟随系统"}（点上方「保存到本机」后新外观才写入本机偏好）
+          {t("manage.currentUsing")}{appearance === "light" ? t("appearance.light") : appearance === "dark" ? t("appearance.dark") : t("appearance.system")}（{t("manage.saveLocalHint")}）
         </p>
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>卡片视图</h2>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.cardView")}</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
           <div>
-            <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>桌面</span>
+            <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("view.desktop")}</span>
             <div className="tab-bar">
               {VIEW_MODE_OPTIONS.map((option) => (
                 <button key={option.value} type="button" className={clsx("tab-btn", draft.desktopNodeViewMode === option.value && "active")} onClick={() => patch("desktopNodeViewMode", option.value)}>
@@ -317,7 +317,7 @@ export function ThemeManage() {
             </div>
           </div>
           <div>
-            <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>移动端</span>
+            <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("view.mobile")}</span>
             <div className="tab-bar">
               {VIEW_MODE_OPTIONS.filter((o) => o.value !== "list").map((option) => (
                 <button key={option.value} type="button" className={clsx("tab-btn", draft.mobileNodeViewMode === option.value && "active")} onClick={() => patch("mobileNodeViewMode", option.value)}>
@@ -330,9 +330,9 @@ export function ThemeManage() {
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>首页排序</h2>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.homeSort")}</h2>
         <div style={{ marginTop: 8 }}>
-          <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>默认排序</span>
+          <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("settings.defaultSort")}</span>
           <div className="tab-bar">
             {HOME_SORT_FIELDS.map((option) => (
               <button key={option} type="button" className={clsx("tab-btn", draft.homeSortField === option && "active")} onClick={() => patch("homeSortField", option)}>
@@ -342,32 +342,32 @@ export function ThemeManage() {
           </div>
         </div>
         <div style={{ marginTop: 8 }}>
-          <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>默认方向</span>
+          <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("settings.defaultDir")}</span>
           <div className="tab-bar">
             <button type="button" className={clsx("tab-btn", draft.homeSortDirection === "asc" && "active")} onClick={() => patch("homeSortDirection", "asc")}>
-              ↑ 升序
+              {t("sort.asc")}
             </button>
             <button type="button" className={clsx("tab-btn", draft.homeSortDirection === "desc" && "active")} onClick={() => patch("homeSortDirection", "desc")}>
-              ↓ 降序
+              {t("sort.desc")}
             </button>
           </div>
         </div>
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>首页显示</h2>
-        <ToggleRow label="显示总览" desc="在线/离线/总带宽汇总面板" checked={draft.showHomeOverview} onPatch={(v) => patch("showHomeOverview", v)} />
-        <ToggleRow label="显示分组页签" desc="按节点分组切换" checked={draft.showGroupTabs} onPatch={(v) => patch("showGroupTabs", v)} />
-        <ToggleRow label="显示地区统计" desc="按地区聚合" checked={draft.showRegionBar} onPatch={(v) => patch("showRegionBar", v)} />
-        <ToggleRow label="卡片显示分组" checked={draft.showCardGroup} onPatch={(v) => patch("showCardGroup", v)} />
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.homeShow")}</h2>
+        <ToggleRow label={t("settings.showOverview")} desc={t("settings.showOverviewDesc")} checked={draft.showHomeOverview} onPatch={(v) => patch("showHomeOverview", v)} />
+        <ToggleRow label={t("settings.showGroupTabs")} desc={t("settings.showGroupTabsDesc")} checked={draft.showGroupTabs} onPatch={(v) => patch("showGroupTabs", v)} />
+        <ToggleRow label={t("settings.showRegionBar")} desc={t("settings.showRegionBarDesc")} checked={draft.showRegionBar} onPatch={(v) => patch("showRegionBar", v)} />
+        <ToggleRow label={t("settings.showCardGroup")} checked={draft.showCardGroup} onPatch={(v) => patch("showCardGroup", v)} />
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>卡片布局</h2>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.cardLayout")}</h2>
         <div className="tab-bar">
           {GRID_COLUMN_OPTIONS.map((count) => (
             <button key={count} type="button" className={clsx("tab-btn", pendingColumns === count && "active")} onClick={() => setPendingColumns(count)}>
-              {count === 0 ? "自动" : `${count} 列`}
+              {count === 0 ? t("settings.auto") : `${count} ${t("settings.cols")}`}
             </button>
           ))}
         </div>
@@ -382,21 +382,21 @@ export function ThemeManage() {
               saveLocalThemeSettings({ ...current, gridColumns: pendingColumns } as Parameters<typeof saveLocalThemeSettings>[0]);
             }}
           >
-            确认
+            {t("common.confirm")}
           </button>
           <span style={{ fontSize: 11, color: "var(--fg-mid)" }}>
-            {draft.gridColumns === pendingColumns ? "已应用" : "尚未应用，点击确认后生效"}
+            {draft.gridColumns === pendingColumns ? t("common.applied") : t("common.notApplied")}
           </span>
         </div>
         <p style={{ fontSize: 11, color: "var(--fg-mid)", marginTop: 8 }}>
-          「自动」按卡片最小宽度自适配列数；选固定列数后，首页大/小/迷你卡片都按该列数排列。
+          {t("settings.cardLayoutHint")}
         </p>
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>分组顺序（拖动排序）</h2>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.groupOrder")}</h2>
         {orderedGroups.length === 0 ? (
-          <p style={{ fontSize: 12, color: "var(--fg-mid)", margin: 0 }}>节点还没有配置分组。</p>
+          <p style={{ fontSize: 12, color: "var(--fg-mid)", margin: 0 }}>{t("settings.noGroups")}</p>
         ) : (
           <div className="group-order-list">
             {orderedGroups.map((group) => (
@@ -418,14 +418,14 @@ export function ThemeManage() {
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>小卡片与列表</h2>
-        <ToggleRow label="小卡显示累计流量" checked={draft.compactShowTrafficTotal} onPatch={(v) => patch("compactShowTrafficTotal", v)} />
-        <ToggleRow label="小卡显示在线时长" checked={draft.compactShowUptime} onPatch={(v) => patch("compactShowUptime", v)} />
-        <ToggleRow label="显示连接数" desc="TCP/UDP（需探针上报）" checked={draft.showConnections} onPatch={(v) => patch("showConnections", v)} />
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.compactList")}</h2>
+        <ToggleRow label={t("settings.compactTraffic")} checked={draft.compactShowTrafficTotal} onPatch={(v) => patch("compactShowTrafficTotal", v)} />
+        <ToggleRow label={t("settings.compactUptime")} checked={draft.compactShowUptime} onPatch={(v) => patch("compactShowUptime", v)} />
+        <ToggleRow label={t("settings.showConnections")} desc={t("settings.showConnectionsDesc")} checked={draft.showConnections} onPatch={(v) => patch("showConnections", v)} />
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>表格列（LIST 视图）</h2>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.listCols")}</h2>
         {LIST_COLUMN_OPTIONS.map((column) => (
           <ToggleRow
             key={column.key}
@@ -437,11 +437,11 @@ export function ThemeManage() {
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>延迟线路</h2>
-        <ToggleRow label="多线路模式" desc="大/小卡片显示多条线路对比；关闭后单线路" checked={draft.enableHomepageMultiPing} onPatch={(v) => patch("enableHomepageMultiPing", v)} />
-        <ToggleRow label="未绑定节点模拟数据" desc="访客看到的模拟延迟由站长显式开启" checked={draft.fakePingForUnbound} onPatch={(v) => patch("fakePingForUnbound", v)} />
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.pingLines")}</h2>
+        <ToggleRow label={t("settings.multiPing")} desc={t("settings.multiPingDesc")} checked={draft.enableHomepageMultiPing} onPatch={(v) => patch("enableHomepageMultiPing", v)} />
+        <ToggleRow label={t("settings.fakePing")} desc={t("settings.fakePingDesc")} checked={draft.fakePingForUnbound} onPatch={(v) => patch("fakePingForUnbound", v)} />
         <div style={{ marginTop: 8 }}>
-          <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>默认线路</span>
+          <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("settings.defaultLine")}</span>
           <div className="tab-bar">
             {pingTasks.map((task) => (
               <button key={task.id} type="button" className={clsx("tab-btn", draft.homepageDefaultPingTaskId === task.id && "active")} onClick={() => patch("homepageDefaultPingTaskId", task.id)}>
@@ -453,11 +453,11 @@ export function ThemeManage() {
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>其他</h2>
-        <ToggleRow label="显示管理后台入口" desc="顶栏 ADMIN 按钮" checked={draft.enableAdminButton} onPatch={(v) => patch("enableAdminButton", v)} />
-        <ToggleRow label="详情页显示 Ping 图表" checked={draft.showPingChart} onPatch={(v) => patch("showPingChart", v)} />
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.other")}</h2>
+        <ToggleRow label={t("settings.adminBtn")} desc={t("settings.adminBtnDesc")} checked={draft.enableAdminButton} onPatch={(v) => patch("enableAdminButton", v)} />
+        <ToggleRow label={t("settings.pingChart")} checked={draft.showPingChart} onPatch={(v) => patch("showPingChart", v)} />
         <div style={{ marginTop: 12 }}>
-          <label style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>隐藏节点（每行一个名称或 UUID）</label>
+          <label style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>{t("settings.hiddenNodes")}</label>
           <textarea
             value={hiddenText}
             onChange={(e) => { setHiddenText(e.target.value); patch("hiddenNodes", normalizeCostIgnoredNodes(e.target.value.split("\n"))); }}
@@ -466,7 +466,7 @@ export function ThemeManage() {
           />
         </div>
         <div style={{ marginTop: 12 }}>
-          <label style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>卡片不透明度（{draft.surfaceOpacity}%）</label>
+          <label style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>{t("settings.surface")}（{draft.surfaceOpacity}%）</label>
           <input
             type="range"
             min="40"
@@ -481,7 +481,7 @@ export function ThemeManage() {
 
       {canSaveToSite && (
         <div className="panel inverse" style={{ marginTop: 16 }}>
-          <p style={{ margin: 0, fontSize: 12 }}>登录站长可用「保存到后端」把当前配置直接写到站点 theme_options（所有访客生效）；未登录时用「复制配置 JSON」粘到后台「外观设置 → 主题自定义配置」。</p>
+          <p style={{ margin: 0, fontSize: 12 }}>{t("manage.siteHint")}</p>
         </div>
       )}
     </div>

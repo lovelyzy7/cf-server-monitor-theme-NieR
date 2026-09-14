@@ -1,3 +1,4 @@
+import { translate } from "@/hooks/useLanguage";
 import { Component, useEffect, type ReactNode } from "react";
 import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 import { readViewModeHint, useViewMode } from "@/hooks/useViewMode";
@@ -13,7 +14,7 @@ interface ErrorBoundaryState {
 function getErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message;
   if (typeof error === "string" && error.trim()) return error;
-  return "页面渲染时发生异常";
+  return translate("error.renderFail");
 }
 
 function safeLocation(): string {
@@ -47,7 +48,7 @@ function reloadPage() {
 }
 
 function ErrorFallback({
-  title = "页面出错了",
+  title,
   message,
   diagnostics,
 }: {
@@ -55,20 +56,21 @@ function ErrorFallback({
   message?: string;
   diagnostics?: string;
 }) {
+  const displayTitle = title ?? translate("error.title");
   return (
     <div className="theme-error-shell">
       <section className="theme-error-card" role="alert">
         <div>
           <p className="theme-error-kicker">Nier</p>
-          <h1 className="theme-error-title">{title}</h1>
+          <h1 className="theme-error-title">{displayTitle}</h1>
           <p className="theme-error-message">
-            {message || "可以刷新页面，或返回首页重新进入。"}
+            {message || translate("error.hint")}
           </p>
         </div>
         {diagnostics && (
           <details style={{ fontSize: 12, color: "var(--fg-mid)" }}>
             <summary style={{ cursor: "pointer", userSelect: "none" }}>
-              诊断信息（反馈时请一并截图或复制）
+              {translate("error.diag")}
             </summary>
             <pre
               style={{
@@ -98,7 +100,7 @@ function ErrorFallback({
           <button type="button" onClick={reloadPage}>
             [ 刷新 ]
           </button>
-          <a className="button" href="#/">返回首页</a>
+          <a className="button" href="#/">{translate("common.backHome")}</a>
         </div>
       </section>
     </div>
@@ -144,8 +146,8 @@ export function RouteErrorFallback() {
   if (isRouteErrorResponse(error)) {
     return (
       <ErrorFallback
-        title={`${error.status} ${error.statusText || "路由错误"}`}
-        message={typeof error.data === "string" ? error.data : "当前路由加载失败。"}
+        title={`${error.status} ${error.statusText || translate("error.routeTitle")}`}
+        message={typeof error.data === "string" ? error.data : translate("error.routeFail")}
         diagnostics={diagnostics}
       />
     );

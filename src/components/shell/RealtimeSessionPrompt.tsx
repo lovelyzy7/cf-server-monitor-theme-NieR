@@ -1,3 +1,4 @@
+import { useLanguage } from "@/hooks/useLanguage";
 import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import {
@@ -21,6 +22,7 @@ export function RealtimeSessionPrompt() {
     getStoreStatusSnapshot,
     getStoreStatusSnapshot,
   );
+  const { t } = useLanguage();
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -40,17 +42,17 @@ export function RealtimeSessionPrompt() {
       aria-live="polite"
     >
       <div className="realtime-session-prompt-body">
-        <strong id={titleId}>&gt; 实时连接已达到时限并断开</strong>
+        <strong id={titleId}>&gt; {t("realtime.expired")}</strong>
         <p>
-          {minutes > 0 ? `站点限制单次实时连接 ${minutes} 分钟，` : ""}页面停在断开前的数据。
+          {minutes > 0 ? `${t("realtime.limit")} ${minutes} ${t("chart.minutes")}，` : ""}{t("realtime.paused")}
         </p>
       </div>
       <div className="realtime-session-prompt-actions">
         <button type="button" onClick={() => setDismissed(true)}>
-          关闭
+          {t("common.close")}
         </button>
         <button type="button" onClick={resumeRealtimeSession}>
-          继续接收
+          {t("realtime.continue")}
         </button>
       </div>
     </section>

@@ -15,6 +15,7 @@ import {
 } from "@/hooks/usePingOverview";
 import { useCarrierNames } from "@/hooks/usePublicConfig";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
+import { useLanguage } from "@/hooks/useLanguage";
 import { CARRIER_TASKS, carrierTaskName } from "@/services/cfsm/mappers";
 import { setPingLineOverrides } from "@/services/pingLineOverrideStore";
 import {
@@ -32,6 +33,7 @@ const VIEWPORT_MARGIN_PX = 8;
  * 换的先存本机（pingLineOverrideStore）；换线路本身不发任何请求。
  */
 export function PingLineSwitcher({ uuid, slot, taskName }: { uuid: string; slot: number; taskName: string }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
@@ -50,7 +52,7 @@ export function PingLineSwitcher({ uuid, slot, taskName }: { uuid: string; slot:
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         aria-label={`${taskName}，切换这一行的线路`}
-        title="切换线路"
+        title={t("card.switchLine")}
         onClick={() => setOpen((value) => !value)}
         onKeyDown={(event) => {
           if (event.key !== "ArrowDown") return;
@@ -66,6 +68,7 @@ export function PingLineSwitcher({ uuid, slot, taskName }: { uuid: string; slot:
 }
 
 function PingLineMenu({
+
   id,
   uuid,
   slot,
@@ -78,6 +81,7 @@ function PingLineMenu({
   triggerRef: RefObject<HTMLButtonElement | null>;
   onClose: (restoreFocus: boolean) => void;
 }) {
+  const { t } = useLanguage();
   const panelRef = useRef<HTMLDivElement | null>(null);
   const { homepageMultiPingTaskIds, homepagePingLineOverrides } = useThemeSettings();
   const overrides = useNodePingLineOverrides(uuid);
@@ -177,7 +181,7 @@ function PingLineMenu({
       id={id}
       className="ping-line-menu"
       role="group"
-      aria-label="切换线路"
+      aria-label={t("card.switchLine")}
       onKeyDown={handleKeyDown}
     >
       {options.map((taskId) => {
@@ -194,7 +198,7 @@ function PingLineMenu({
             style={active ? itemStyle : undefined}
           >
             <span className="ping-line-menu-label">{carrierTaskName(taskId, carrierNames)}</span>
-            {swaps && <span className="ping-line-menu-hint">互换</span>}
+            {swaps && <span className="ping-line-menu-hint">⇄</span>}
             {active && <span aria-hidden>✓</span>}
           </button>
         );
@@ -202,9 +206,9 @@ function PingLineMenu({
       {customized && (
         <>
           <div className="ping-line-menu-divider" role="separator" />
-          <button type="button" className="ping-line-menu-item" title="这台节点的线路恢复成站点设置" onClick={reset}>
+          <button type="button" className="ping-line-menu-item" title={t("card.restoreLine")} onClick={reset}>
             <span aria-hidden>↺</span>
-            <span className="ping-line-menu-label">恢复默认</span>
+            <span className="ping-line-menu-label">{t("colors.restore")}</span>
           </button>
         </>
       )}

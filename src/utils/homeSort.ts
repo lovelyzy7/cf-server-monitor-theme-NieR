@@ -13,10 +13,10 @@ export const HOME_SORT_FIELDS: readonly HomeSortField[] = [
 ];
 
 export const HOME_SORT_FIELD_LABELS: Record<HomeSortField, string> = {
-  default: "默认",
-  name: "名称",
-  speed: "实时网速",
-  traffic: "累计流量",
+  default: "sort.default",
+  name: "sort.name",
+  speed: "sort.speed",
+  traffic: "sort.traffic",
 };
 
 // 每个维度的自然默认方向:文本升序(A→Z),数值降序(高的在前)。

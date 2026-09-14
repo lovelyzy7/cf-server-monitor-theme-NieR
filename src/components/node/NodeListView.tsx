@@ -1,9 +1,10 @@
-import { memo, useCallback, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "react-router-dom";
 import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
 import { OsLogo } from "@/components/ui/OsLogo";
 import { useNodeCardModel } from "@/hooks/useNodeCardModel";
+import { useLanguage, type I18nKey } from "@/hooks/useLanguage";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { usePreferences } from "@/hooks/usePreferences";
 import { getLocalThemeSettings, saveLocalThemeSettings } from "@/services/themeSettingsStore";
@@ -27,15 +28,15 @@ const LIST_COLS_STORAGE_KEY = "cfsm-nier:list-cols:v1";
 const MIN_COL_WIDTH = 56;
 /** 列定义：key 对应主题设置 listColumns，lc 对应列宽变量 --lcN。节点列不可隐藏。 */
 const LIST_COLUMNS = [
-  { key: "os", label: "系统", className: "col-os", lc: 1, def: 130 },
-  { key: "cpu", label: "CPU", className: "col-metric", lc: 2, def: 100 },
-  { key: "mem", label: "内存", className: "col-metric", lc: 3, def: 100 },
-  { key: "disk", label: "磁盘", className: "col-metric", lc: 4, def: 100 },
-  { key: "load", label: "负载", className: "col-load", lc: 5, def: 90 },
-  { key: "live", label: "实时", className: "col-live", lc: 6, def: 110 },
-  { key: "traffic", label: "流量", className: "col-traffic", lc: 7, def: 130 },
-  { key: "net", label: "网络", className: "col-net", lc: 8, def: 120 },
-  { key: "life", label: "运行", className: "col-life", lc: 9, def: 120 },
+  { key: "os", i18n: "list.os", className: "col-os", lc: 1, def: 130 },
+  { key: "cpu", i18n: "detail.cpu", className: "col-metric", lc: 2, def: 100 },
+  { key: "mem", i18n: "list.mem", className: "col-metric", lc: 3, def: 100 },
+  { key: "disk", i18n: "list.disk", className: "col-metric", lc: 4, def: 100 },
+  { key: "load", i18n: "list.load", className: "col-load", lc: 5, def: 90 },
+  { key: "live", i18n: "list.live", className: "col-live", lc: 6, def: 110 },
+  { key: "traffic", i18n: "list.traffic", className: "col-traffic", lc: 7, def: 130 },
+  { key: "net", i18n: "list.net", className: "col-net", lc: 8, def: 120 },
+  { key: "life", i18n: "list.uptime", className: "col-life", lc: 9, def: 120 },
 ] as const;
 
 type ListColumn = (typeof LIST_COLUMNS)[number];
@@ -90,28 +91,28 @@ export function resolveListPingState(
   return loadState ?? (pingIsAssigned ? "ready" : "pending");
 }
 
-export function formatListPingStatus(latency: number | null, state: ListPingState) {
+export function formatListPingStatus(latency: number | null, state: ListPingState, t: (key: I18nKey) => string) {
   const roundedLatency = latency == null ? null : Math.round(latency);
-  const value = roundedLatency == null ? null : `${roundedLatency} 毫秒`;
+  const value = roundedLatency == null ? null : `${roundedLatency} ms`;
   if (value != null) {
     if (state === "error") {
-      return { visibleText: `${roundedLatency}`, title: "首页 Ping 刷新失败，显示上次数据", ariaText: `${value}，首页 Ping 刷新失败，显示上次数据` };
+      return { visibleText: `${roundedLatency}`, title: t("card.homePing.refreshFail"), ariaText: `${value}, ${t("card.homePing.refreshFail")}` };
     }
     if (state === "pending") {
-      return { visibleText: `${roundedLatency}`, title: "首页 Ping 正在刷新，显示上次数据", ariaText: `${value}，首页 Ping 正在刷新，显示上次数据` };
+      return { visibleText: `${roundedLatency}`, title: t("card.homePing.refreshing"), ariaText: `${value}, ${t("card.homePing.refreshing")}` };
     }
     return { visibleText: `${roundedLatency}`, title: `${value}`, ariaText: value };
   }
 
   switch (state) {
     case "unconfigured":
-      return { visibleText: "未配置", title: "未配置首页 Ping", ariaText: "未配置首页 Ping" };
+      return { visibleText: t("common.unconfigured"), title: t("card.homePing.unconfigured"), ariaText: t("card.homePing.unconfigured") };
     case "pending":
-      return { visibleText: "加载中", title: "正在加载首页 Ping", ariaText: "首页 Ping 加载中" };
+      return { visibleText: t("common.loading"), title: t("card.homePing.loading"), ariaText: t("card.homePing.loading") };
     case "error":
-      return { visibleText: "加载失败", title: "首页 Ping 加载失败", ariaText: "首页 Ping 加载失败" };
+      return { visibleText: t("common.failed"), title: t("card.homePing.fail"), ariaText: t("card.homePing.fail") };
     default:
-      return { visibleText: "无样本", title: "暂无有效 Ping 样本", ariaText: "无样本" };
+      return { visibleText: t("card.noSamples"), title: t("card.noValidPing"), ariaText: t("card.noSamples") };
   }
 }
 
@@ -191,27 +192,45 @@ function ListLatency({
   buckets: Parameters<typeof LatencyBars>[0]["buckets"];
   redrawKey: string;
 }) {
+  const { t } = useLanguage();
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const cellRef = useRef<HTMLDivElement | null>(null);
+  const [cellWidth, setCellWidth] = useState(0);
+  useEffect(() => {
+    const el = cellRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      setCellWidth((prev) => (Math.abs(prev - width) > 2 ? width : prev));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  // 列宽越大展示越多采样（更长时间跨度）；默认列宽（120px）即完整 2 小时窗口。
+  const visibleCount =
+    cellWidth > 0 ? Math.min(buckets.length, Math.max(6, Math.round(cellWidth / 4.2))) : buckets.length;
+  const visibleBuckets = visibleCount < buckets.length ? buckets.slice(buckets.length - visibleCount) : buckets;
   const state = resolveListPingState(loadState, hasRealHomepagePingBinding, pingIsAssigned);
-  const status = formatListPingStatus(latency, state);
-  const hoveredBucket = hoveredIndex == null ? null : (buckets[hoveredIndex] ?? null);
-  const tooltip = hoveredBucket ? formatHealthBucketTooltip(hoveredBucket, "latency") : null;
+  const status = formatListPingStatus(latency, state, t);
+  const hoveredBucket = hoveredIndex == null ? null : (visibleBuckets[hoveredIndex] ?? null);
+  const tooltip = hoveredBucket ? formatHealthBucketTooltip(hoveredBucket, "latency", t) : null;
 
   return (
-    <div className="node-list-latency" data-ping-state={state} aria-label={`网络延迟 ${status.ariaText}`}>
+    <div ref={cellRef} className="node-list-latency" data-ping-state={state} aria-label={`${t("ping.latency")} ${status.ariaText}`}>
       <span className="node-list-latency-value tabular" style={{ color: latencyColor }} title={status.title}>
         {status.visibleText}
         {latency != null && <small>ms</small>}
       </span>
       <span className="node-list-latency-bars">
-        <LatencyBars buckets={buckets} redrawKey={redrawKey} height={14} onHoverIndex={setHoveredIndex} />
-        <HealthBucketTooltip text={tooltip} index={hoveredIndex} count={buckets.length} />
+        <LatencyBars buckets={visibleBuckets} redrawKey={redrawKey} height={14} onHoverIndex={setHoveredIndex} />
+        <HealthBucketTooltip text={tooltip} index={hoveredIndex} count={visibleBuckets.length} />
       </span>
     </div>
   );
 }
 
 const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hiddenKeys: ReadonlySet<string> }) {
+  const { t } = useLanguage();
   const { resolvedAppearance } = usePreferences();
   const colorsVersion = useMetricColorsVersion();
   const redrawKey = `${resolvedAppearance}:${colorsVersion}`;
@@ -238,23 +257,23 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
     osName,
   } = model;
   const listPingState = resolveListPingState(ping.loadState, hasRealHomepagePingBinding, ping.isAssigned);
-  const listPingStatus = formatListPingStatus(ping.lastValue, listPingState);
-  const detailLabels = nodeDetailLinkLabels(node.name, osName);
+  const listPingStatus = formatListPingStatus(ping.lastValue, listPingState, t);
+  const detailLabels = nodeDetailLinkLabels(node.name, osName, t);
   const usedPct = `${Math.round(clamp01(traffic.fraction) * 100)}%`;
   const rowLabel = [
     node.name,
-    `系统 ${formatOsLabel(osName, node.os)}`,
+    `${t("list.os")} ${formatOsLabel(osName, node.os)}`,
     `CPU ${pctText(node.cpuPct)}`,
-    `内存 ${pctText(node.ramPct)}`,
-    `磁盘 ${pctText(node.diskPct)}`,
-    `负载 ${node.load1.toFixed(2)}`,
-    `上行 ${upRate.value}${upRate.unit}`,
-    `下行 ${downRate.value}${downRate.unit}`,
-    `流量使用 ${usedPct}`,
-    `网络延迟 ${listPingStatus.ariaText}`,
-    node.online === true ? "在线" : node.online === false ? "离线" : "状态未知",
-    `运行 ${uptime.value}${uptime.unit}`,
-    "查看详情",
+    `${t("list.mem")} ${pctText(node.ramPct)}`,
+    `${t("list.disk")} ${pctText(node.diskPct)}`,
+    `${t("list.load")} ${node.load1.toFixed(2)}`,
+    `${t("card.liveUp")} ${upRate.value}${upRate.unit}`,
+    `${t("card.liveDown")} ${downRate.value}${downRate.unit}`,
+    `${t("card.traffic")} ${usedPct}`,
+    `${t("ping.latency")} ${listPingStatus.ariaText}`,
+    node.online === true ? t("list.online") : node.online === false ? t("list.offline") : t("list.unknown"),
+    `${t("card.uptime")} ${uptime.value}${uptime.unit ? t(uptime.unit) : ""}`,
+    t("card.viewDetail"),
   ].join("，");
 
   return (
@@ -356,7 +375,7 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
 
       {!hiddenKeys.has("life") && (
         <div className="col-life node-list-stack">
-          <StackLine value={uptime.value} unit={uptime.unit} color="var(--progress-cpu)" />
+          <StackLine value={uptime.value} unit={uptime.unit ? t(uptime.unit) : undefined} color="var(--progress-cpu)" />
         </div>
       )}
     </Link>
@@ -364,11 +383,13 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
 });
 
 export function NodeListView({ uuids }: { uuids: string[] }) {
+  const { t } = useLanguage();
   const themeSettings = useThemeSettings();
   const [cols, setCols] = useState<number[]>(readListCols);
   const colsRef = useRef(cols);
   colsRef.current = cols;
   const dragRef = useRef<{ index: number; startX: number; startWidth: number } | null>(null);
+  const [draggingCol, setDraggingCol] = useState<number | null>(null);
 
   const visibleColumns = useMemo<ListColumn[]>(
     () => LIST_COLUMNS.filter((column) => isListColumnVisible(themeSettings.listColumns, column.key)),
@@ -404,19 +425,22 @@ export function NodeListView({ uuids }: { uuids: string[] }) {
       // 指针已结束时忽略。
     }
     dragRef.current = { index, startX: event.clientX, startWidth: cols[index] ?? MIN_COL_WIDTH };
+    setDraggingCol(index);
   };
 
   const onHandlePointerMove = (event: ReactPointerEvent<HTMLSpanElement>) => {
     const drag = dragRef.current;
     if (!drag) return;
     const dx = event.clientX - drag.startX;
-    const nextWidth = Math.max(MIN_COL_WIDTH, Math.round(drag.startWidth + dx));
+    // 4px 吸附，拖动更跟手；列宽实时生效，内容（延迟柱）随宽度自适应。
+    const nextWidth = Math.max(MIN_COL_WIDTH, Math.round((drag.startWidth + dx) / 4) * 4);
     setCols((prev) => prev.map((width, index) => (index === drag.index ? nextWidth : width)));
   };
 
   const onHandlePointerUp = () => {
     if (!dragRef.current) return;
     dragRef.current = null;
+    setDraggingCol(null);
     writeListCols(colsRef.current);
   };
 
@@ -435,22 +459,22 @@ export function NodeListView({ uuids }: { uuids: string[] }) {
   return (
     <div>
       <div className="node-list-toolbar">
-        <button type="button" className="cost-summary-action" onClick={resetTableStyle} title="恢复默认列宽与列设置">
-          <span aria-hidden>↺</span> 重置样式
+        <button type="button" className="cost-summary-action" onClick={resetTableStyle} title={t("list.restoreCols")}>
+          <span aria-hidden>↺</span> {t("list.resetStyle")}
         </button>
       </div>
       <div className="node-list-scroll">
         <div className="node-list" style={colVars}>
         <div className="node-list-row node-list-head" aria-hidden>
-          <div className="node-list-cell node-list-head-cell">节点</div>
+          <div className="node-list-cell node-list-head-cell">{t("list.node")}</div>
           {visibleColumns.map((column) => (
             <div key={column.key} className={`node-list-cell node-list-head-cell ${column.className}`}>
-              {column.label}
+              {t(column.i18n)}
               <span
-                className="node-list-resize-handle"
+                className={`node-list-resize-handle${draggingCol === column.lc ? " is-dragging" : ""}`}
                 role="separator"
                 aria-orientation="vertical"
-                title={`拖拽调整「${column.label}」列宽`}
+                title={`${t("list.dragHint")}「${t(column.i18n)}」`}
                 onPointerDown={onHandlePointerDown(column.lc)}
                 onPointerMove={onHandlePointerMove}
                 onPointerUp={onHandlePointerUp}

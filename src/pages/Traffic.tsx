@@ -10,7 +10,7 @@ import { useTodayTrafficStats } from "@/hooks/useTodayTrafficStats";
 import { useVisibleNodes } from "@/hooks/useVisibleNodes";
 import { useHomeNodeSummaries } from "@/hooks/useNode";
 import { usePacedRate } from "@/hooks/usePacedRate";
-import { useLanguage } from "@/hooks/useLanguage";
+import { useLanguage, type I18nKey } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { clearHistoryCache, getLoadRecords } from "@/services/api";
 import { formatByteRateLabel, formatBytes } from "@/utils/format";
@@ -40,11 +40,11 @@ interface TrafficDetail {
 type TrafficSortField = "name" | "total" | "peakUp" | "peakDown";
 type TrafficSortDirection = "asc" | "desc";
 
-const TRAFFIC_TABLE_COLUMNS: Array<{ field: TrafficSortField; label: string; numeric?: boolean }> = [
-  { field: "name", label: "节点" },
-  { field: "total", label: "当日流量", numeric: true },
-  { field: "peakUp", label: "上行峰值", numeric: true },
-  { field: "peakDown", label: "下行峰值", numeric: true },
+const TRAFFIC_TABLE_COLUMNS: Array<{ field: TrafficSortField; label: I18nKey; numeric?: boolean }> = [
+  { field: "name", label: "traffic.columnNode" },
+  { field: "total", label: "traffic.columnTotal", numeric: true },
+  { field: "peakUp", label: "traffic.columnPeakUp", numeric: true },
+  { field: "peakDown", label: "traffic.columnPeakDown", numeric: true },
 ];
 
 const NATURAL_DIRECTION: Record<TrafficSortField, TrafficSortDirection> = {
@@ -96,15 +96,16 @@ function TrafficSortControl({
   direction: TrafficSortDirection;
   onSelect: (field: TrafficSortField) => void;
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
   const labels: Record<TrafficSortField, string> = {
-    name: "节点",
-    total: "当日流量",
-    peakUp: "上行峰值",
-    peakDown: "下行峰值",
+    name: t("traffic.columnNode"),
+    total: t("traffic.columnTotal"),
+    peakUp: t("traffic.columnPeakUp"),
+    peakDown: t("traffic.columnPeakDown"),
   };
 
   useEffect(() => {
@@ -134,7 +135,7 @@ function TrafficSortControl({
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        title={`排序：${labels[field]}（${direction === "asc" ? "升序" : "降序"}）`}
+        title={`${t("sort.mode")}：${labels[field]}（${direction === "asc" ? t("sort.ascText") : t("sort.descText")}）`}
         onClick={() => setOpen((value) => !value)}
       >
         <span aria-hidden>{direction === "asc" ? "↑" : "↓"}</span>
@@ -142,7 +143,7 @@ function TrafficSortControl({
         <span aria-hidden>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
-        <div id={panelId} className="home-sort-panel" role="group" aria-label="排序方式">
+        <div id={panelId} className="home-sort-panel" role="group" aria-label={t("sort.mode")}>
           {(Object.keys(labels) as TrafficSortField[]).map((option) => {
             const active = option === field;
             return (
@@ -179,17 +180,18 @@ function PeakValue({ value, timeMs }: { value: number; timeMs: number | null }) 
 }
 
 function PeakSummaryRow({ direction, detail }: { direction: "up" | "down"; detail: TrafficDetail | null }) {
+  const { t } = useLanguage();
   const value = direction === "up" ? detail?.stat.peakUp ?? 0 : detail?.stat.peakDown ?? 0;
   const timeMs = direction === "up" ? detail?.stat.peakUpAt ?? null : detail?.stat.peakDownAt ?? null;
   return (
     <div className="traffic-summary-peak-row">
       <span className="traffic-summary-peak-label">
-        {direction === "up" ? "↑ 上行" : "↓ 下行"}
+        {direction === "up" ? t("traffic.up") : t("traffic.down")}
       </span>
       <span className="traffic-summary-peak-main">
         <strong>{detail ? formatByteRateLabel(value) : "—"}</strong>
         <small>
-          {detail && value > 0 ? `${detail.node.name} · ${formatPeakTime(timeMs, value)}` : "暂无峰值"}
+          {detail && value > 0 ? `${detail.node.name} · ${formatPeakTime(timeMs, value)}` : t("traffic.noPeak")}
         </small>
       </span>
     </div>
@@ -197,14 +199,14 @@ function PeakSummaryRow({ direction, detail }: { direction: "up" | "down"; detai
 }
 
 const NODE_CHART_RANGES = [
-  { label: "1 小时", hours: 1 },
-  { label: "2 小时", hours: 2 },
-  { label: "3 小时", hours: 3 },
-  { label: "7 小时", hours: 7 },
-  { label: "1 天", hours: 24 },
-  { label: "3 天", hours: 72 },
-  { label: "7 天", hours: 168 },
-  { label: "14 天", hours: 336 },
+  { label: "range.h1", hours: 1 },
+  { label: "range.h2", hours: 2 },
+  { label: "range.h3", hours: 3 },
+  { label: "range.h7", hours: 7 },
+  { label: "range.d1", hours: 24 },
+  { label: "range.d3", hours: 72 },
+  { label: "range.d7", hours: 168 },
+  { label: "range.d14", hours: 336 },
 ] as const;
 
 const NODE_CHART_HOURS_TIERS = [1, 6, 12, 24, 48, 96, 168, 336];
@@ -220,6 +222,7 @@ function tierForSpan(spanMs: number): number {
  * 后端只保留 7 天，更早的日期只有保留期内的数据）。未登录限 24 小时。
  */
 function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; down: number } | null }) {
+  const { t } = useLanguage();
   const { data: me } = useAuth();
   const [rangeHours, setRangeHours] = useState<number>(24);
   const [customDate, setCustomDate] = useState<string | null>(null);
@@ -259,19 +262,19 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
   const beyondRetention = customStartMs != null && anchorMs - customStartMs > retentionMs;
 
   return (
-    <section className="panel" aria-label="节点当日流量与网速" style={{ marginTop: 8 }}>
+    <section className="panel" aria-label={t("traffic.nodeChartTitle")} style={{ marginTop: 8 }}>
       <header style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-        <strong style={{ letterSpacing: "0.12em", textTransform: "uppercase", fontSize: 13 }}>节点流量与网速</strong>
+        <strong style={{ letterSpacing: "0.12em", textTransform: "uppercase", fontSize: 13 }}>{t("traffic.chartTitle")}</strong>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--fg-mid)" }}>
-            {hasSamples ? `${samples.length} 个采样 · 左轴累计按采样积分估算` : "等待采样数据"}
+            {hasSamples ? `${samples.length} ${t("common.samples")} · ${t("traffic.estimate")}` : t("traffic.waiting")}
           </span>
-          <button type="button" className="cost-summary-action" onClick={refreshChart} disabled={samplesQuery.isFetching} aria-busy={samplesQuery.isFetching} title="重新拉取该时间范围">
-            ⟳ 刷新
+          <button type="button" className="cost-summary-action" onClick={refreshChart} disabled={samplesQuery.isFetching} aria-busy={samplesQuery.isFetching} title={t("traffic.refetch")}>
+            ⟳ {t("common.refresh")}
           </button>
         </span>
       </header>
-      <div className="tab-bar node-chart-ranges" role="group" aria-label="时间范围">
+      <div className="tab-bar node-chart-ranges" role="group" aria-label={t("traffic.range")}>
         {NODE_CHART_RANGES.map((range) => (
           <button
             key={range.hours}
@@ -280,12 +283,12 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
             aria-pressed={customDate == null && rangeHours === range.hours}
             onClick={() => selectRange(range.hours)}
           >
-            {range.label}
+            {t(range.label as I18nKey)}
           </button>
         ))}
       </div>
       <label className="node-chart-date">
-        <span>起始日期</span>
+        <span>{t("traffic.startDate")}</span>
         <input
           type="date"
           className="nie-date-input"
@@ -294,7 +297,7 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
           max={toDateInputValue(anchorMs)}
           onChange={(e) => selectDate(e.target.value)}
         />
-        {beyondRetention && <em>仅保留最近 14 天，图中为保留期内的数据</em>}
+        {beyondRetention && <em>{t("traffic.retention")}</em>}
       </label>
       {!allowed ? (
         <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>
@@ -305,7 +308,7 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
       ) : samplesQuery.isError ? (
         <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>
           节点图加载失败{" "}
-          <button type="button" onClick={() => void samplesQuery.refetch()}>重试</button>
+          <button type="button" onClick={() => void samplesQuery.refetch()}>{t("common.retry")}</button>
         </div>
       ) : !hasSamples ? (
         <div style={{ color: "var(--fg-mid)", textAlign: "center", padding: "20px 0" }}>
@@ -512,7 +515,7 @@ export function Traffic() {
           <div className="traffic-summary-grid">
             <div className="panel inverse panel-corners traffic-summary-card">
               <div className="traffic-summary-head">
-                <span>当日流量</span>
+                <span>{t("traffic.today")}</span>
                 <span>{DAY_FORMATTER.format(dayStartMs)}</span>
               </div>
               <strong className="traffic-summary-total">
@@ -523,15 +526,15 @@ export function Traffic() {
                 <span>↓ {formatBytes(totalDown)}</span>
               </div>
               <div className="traffic-summary-directions" style={{ marginTop: 6, borderTop: "1px solid rgba(216,209,187,0.15)", paddingTop: 6 }}>
-                <span style={{ color: speedRateColor("MB/s") }}>实时 ↑ {formatByteRateLabel(pacedLive.up)}</span>
+                <span style={{ color: speedRateColor("MB/s") }}>{t("common.realtime")} ↑ {formatByteRateLabel(pacedLive.up)}</span>
                 <span style={{ color: speedRateColor("MB/s") }}>↓ {formatByteRateLabel(pacedLive.down)}</span>
               </div>
             </div>
 
             <div className="panel inverse panel-corners traffic-summary-card">
               <div className="traffic-summary-head">
-                <span>当日采样峰值</span>
-                <span>统计至 {TIME_FORMATTER.format(updatedAt)}</span>
+                <span>{t("traffic.peak")}</span>
+                <span>{t("traffic.statTo")} {TIME_FORMATTER.format(updatedAt)}</span>
               </div>
               <div className="traffic-summary-peak-list">
                 <PeakSummaryRow direction="up" detail={peakUp} />
@@ -541,9 +544,9 @@ export function Traffic() {
           </div>
 
           <div className="assets-section-head">
-            <span className="assets-eyebrow">节点明细</span>
-            <span className="assets-count">{details.length} 台</span>
-            <span className="traffic-sample-note">峰值按历史采样计算</span>
+            <span className="assets-eyebrow">{t("traffic.nodes")}</span>
+            <span className="assets-count">{details.length}</span>
+            <span className="traffic-sample-note">{t("traffic.peakNote")}</span>
           </div>
 
           {!isMobileLayout ? (
@@ -554,12 +557,12 @@ export function Traffic() {
                     {TRAFFIC_TABLE_COLUMNS.map((column) => (
                       <th key={column.field} data-numeric={column.numeric || undefined} aria-sort={sortField === column.field ? (sortDirection === "asc" ? "ascending" : "descending") : undefined}>
                         <button type="button" onClick={() => handleSort(column.field)} data-active={sortField === column.field}>
-                          {column.label}{sortField === column.field && ` ${directionIcon}`}
+                          {t(column.label)}{sortField === column.field && ` ${directionIcon}`}
                         </button>
                       </th>
                     ))}
-                    <th data-numeric>实时</th>
-                    <th data-action>操作</th>
+                    <th data-numeric>{t("traffic.columnLive")}</th>
+                    <th data-action>{t("traffic.columnAction")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -582,7 +585,7 @@ export function Traffic() {
                                 <small>↑ {formatBytes(stat.trafficUp)} · ↓ {formatBytes(stat.trafficDown)}</small>
                               </span>
                             ) : (
-                              <span className="traffic-no-data">无数据</span>
+                              <span className="traffic-no-data">{t("common.noData")}</span>
                             )}
                           </td>
                           <td data-numeric>{stat.hasSamples ? <PeakValue value={stat.peakUp} timeMs={stat.peakUpAt} /> : "—"}</td>
@@ -621,7 +624,7 @@ export function Traffic() {
                         <span>{node.name}</span>
                       </Link>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <strong style={{ fontFamily: "var(--font-mono)" }}>{stat.hasSamples ? formatBytes(total) : "无数据"}</strong>
+                        <strong style={{ fontFamily: "var(--font-mono)" }}>{stat.hasSamples ? formatBytes(total) : t("common.noData")}</strong>
                         <TrafficDetailToggle expanded={expanded} controlsId={detailId} onClick={() => toggleExpanded(node.uuid)} />
                       </div>
                     </div>
@@ -632,13 +635,13 @@ export function Traffic() {
                           <span>↓ {formatBytes(stat.trafficDown)}</span>
                         </div>
                         <div style={{ display: "flex", gap: 14, fontFamily: "var(--font-mono)", fontSize: 12, marginTop: 2, color: "var(--fg-mid)" }}>
-                          <span>实时 ↑ {formatByteRateLabel(liveByUuid.get(node.uuid)?.up)}</span>
+                          <span>{t("common.realtime")} ↑ {formatByteRateLabel(liveByUuid.get(node.uuid)?.up)}</span>
                           <span>↓ {formatByteRateLabel(liveByUuid.get(node.uuid)?.down)}</span>
                         </div>
                         <dl className="kv" style={{ marginTop: 8, gridTemplateColumns: "120px 1fr" }}>
-                          <dt>上行峰值</dt>
+                          <dt>{t("traffic.columnPeakUp")}</dt>
                           <dd><PeakValue value={stat.peakUp} timeMs={stat.peakUpAt} /></dd>
-                          <dt>下行峰值</dt>
+                          <dt>{t("traffic.columnPeakDown")}</dt>
                           <dd><PeakValue value={stat.peakDown} timeMs={stat.peakDownAt} /></dd>
                         </dl>
                       </>

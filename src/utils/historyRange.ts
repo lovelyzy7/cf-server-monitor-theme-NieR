@@ -1,3 +1,5 @@
+import type { I18nKey } from "@/hooks/useLanguage";
+
 interface HistoryRangeMeta {
   rangeStartMs?: number;
   rangeEndMs?: number;
@@ -47,23 +49,24 @@ export function historyChartRangeSeconds(
   return end > start ? [start, end] : null;
 }
 
-function formatDuration(ms: number) {
+function formatDuration(ms: number, t: (key: I18nKey) => string) {
   const hours = ms / (60 * 60 * 1000);
   if (hours >= 24) {
     const days = hours / 24;
-    return `${Number(days.toFixed(1))} 天`;
+    return `${Number(days.toFixed(1))} ${t("chart.days")}`;
   }
   if (hours >= 1) {
-    return `${Number(hours.toFixed(1))} 小时`;
+    return `${Number(hours.toFixed(1))} ${t("chart.hours")}`;
   }
   const minutes = Math.max(1, Math.round(ms / 60_000));
-  return `${minutes} 分钟`;
+  return `${minutes} ${t("chart.minutes")}`;
 }
 
 export function historyCoverageLabel(
   meta: HistoryRangeMeta | null | undefined,
   actualStartSeconds: number | null | undefined,
   actualEndSeconds: number | null | undefined,
+  t: (key: I18nKey) => string,
 ) {
   const range = historyChartRangeSeconds(meta);
   if (!range || !finitePositive(actualStartSeconds) || !finitePositive(actualEndSeconds)) {
@@ -79,6 +82,6 @@ export function historyCoverageLabel(
   );
   const ratio = requestedMs > 0 ? actualMs / requestedMs : 0;
   return ratio >= 0.98
-    ? `覆盖完整 ${formatDuration(requestedMs)}`
-    : `实际覆盖 ${formatDuration(actualMs)} / ${formatDuration(requestedMs)}`;
+    ? `${t("chart.coverageFull")} ${formatDuration(requestedMs, t)}`
+    : `${t("chart.coverageActual")} ${formatDuration(actualMs, t)} / ${formatDuration(requestedMs, t)}`;
 }

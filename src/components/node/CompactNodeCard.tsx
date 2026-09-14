@@ -5,6 +5,7 @@ import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
 import { OsLogo } from "@/components/ui/OsLogo";
 import { useNodeCardModel } from "@/hooks/useNodeCardModel";
+import { useLanguage } from "@/hooks/useLanguage";
 import { HOMEPAGE_PING_BUCKET_COUNT } from "@/hooks/usePingOverview";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { formatBytes } from "@/utils/format";
@@ -115,6 +116,31 @@ function CompactTrafficPulse({ up, down }: { up: TrafficTrendSample[]; down: Tra
   );
 }
 
+function CompactTrafficSpark({ up, down }: { up: TrafficTrendSample[]; down: TrafficTrendSample[] }) {
+  const W = 72;
+  const H = 18;
+  const N = TRAFFIC_DOT_COUNT;
+  const build = (samples: TrafficTrendSample[]) => {
+    const selected = samples.slice(-N);
+    const padding = N - selected.length;
+    const pts: string[] = [];
+    for (let i = 0; i < N; i++) {
+      const s = i < padding ? null : selected[i - padding];
+      const level = s?.level ?? 0;
+      const x = N > 1 ? (i / (N - 1)) * W : W / 2;
+      const y = H - 1.5 - Math.max(0.05, level) * (H - 3);
+      pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    return pts.join(" ");
+  };
+  return (
+    <svg className="compact-traffic-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
+      <polyline points={build(up)} fill="none" stroke="var(--progress-memory)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+      <polyline points={build(down)} fill="none" stroke="var(--progress-network)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 function CompactInfoRow({
   icon,
   label,
@@ -145,6 +171,7 @@ function CompactInfoRow({
 }
 
 function HealthBars({ buckets, kind }: { buckets: PingOverviewBucket[]; kind: "latency" | "loss" }) {
+  const { t } = useLanguage();
   const bars = buckets.slice(-HOMEPAGE_PING_BUCKET_COUNT);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -152,7 +179,7 @@ function HealthBars({ buckets, kind }: { buckets: PingOverviewBucket[]; kind: "l
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const activeIndex = hoveredIndex ?? selectedIndex;
   const activeBucket = activeIndex == null ? null : bars[activeIndex] ?? null;
-  const activeTooltip = activeBucket ? formatHealthBucketTooltip(activeBucket, kind) : null;
+  const activeTooltip = activeBucket ? formatHealthBucketTooltip(activeBucket, kind, t) : null;
   const activeLeft =
     activeIndex == null || bars.length === 0
       ? "50%"
@@ -191,7 +218,7 @@ function HealthBars({ buckets, kind }: { buckets: PingOverviewBucket[]; kind: "l
       style={{ "--compact-health-tooltip-x": activeLeft } as CSSProperties}
       tabIndex={0}
       role="group"
-      aria-label={`${kind === "latency" ? "延迟" : "丢包"}历史${activeTooltip ? `，${activeTooltip}` : ""}，使用左右方向键查看`}
+      aria-label={`${kind === "latency" ? t("ping.latency") : t("ping.loss")}${activeTooltip ? `，${activeTooltip}` : ""}`}
       onFocus={() => {
         if (!supportsFineHover()) return;
         if (selectedIndex == null) selectIndex(bars.length - 1);
@@ -287,7 +314,8 @@ function CompactHealthItem({
 }
 
 function CompactNodeHeader({ node, osName }: { node: CompactNode; osName: string }) {
-  const detailLabels = nodeDetailLinkLabels(node.name, osName);
+  const { t } = useLanguage();
+  const detailLabels = nodeDetailLinkLabels(node.name, osName, t);
   return (
     <header className="compact-node-header">
       <div className="compact-node-title-wrap">
@@ -331,13 +359,14 @@ function CompactNodeChips({ subtitle, tags, ipv4, ipv6 }: { subtitle: string; ta
 }
 
 function CompactNodeVitals({ node, loadFraction }: { node: CompactNode; loadFraction: number }) {
+  const { t } = useLanguage();
   return (
     <div className="compact-node-vitals">
-      <CompactGauge icon={<span aria-hidden>▣</span>} label="CPU" value={formatCompactPercent(node.cpuPct)} detail={`${node.cpu_cores || 0} 核`} fraction={node.cpuPct / 100} color="var(--progress-cpu)" />
-      <CompactGauge icon={<span aria-hidden>▤</span>} label="内存" value={formatCompactPercent(node.ramPct)} detail={`${formatBytes(node.ramUsed)} / ${formatBytes(node.ramTotal)}`} fraction={node.ramPct / 100} color="var(--progress-memory)" />
-      <CompactGauge icon={<span aria-hidden>▤</span>} label="Swap" value={node.swapTotal > 0 ? formatCompactPercent((node.swapUsed / node.swapTotal) * 100) : "0%"} detail={node.swapTotal > 0 ? `${formatBytes(node.swapUsed)} / ${formatBytes(node.swapTotal)}` : "未配置"} fraction={node.swapTotal > 0 ? node.swapUsed / node.swapTotal : 0} color="var(--progress-swap)" />
-      <CompactGauge icon={<span aria-hidden>◫</span>} label="磁盘" value={formatCompactPercent(node.diskPct)} detail={`${formatBytes(node.diskUsed)} / ${formatBytes(node.diskTotal)}`} fraction={node.diskPct / 100} color="var(--progress-disk)" />
-      <CompactGauge icon={<span aria-hidden>≋</span>} label="负载" value={node.load1.toFixed(2)} detail={`${node.load5.toFixed(2)} / ${node.load15.toFixed(2)}`} fraction={loadFraction} color="var(--progress-load)" />
+      <CompactGauge icon={<span aria-hidden>▣</span>} label="CPU" value={formatCompactPercent(node.cpuPct)} detail={`${node.cpu_cores || 0} ${t("common.cores")}`} fraction={node.cpuPct / 100} color="var(--progress-cpu)" />
+      <CompactGauge icon={<span aria-hidden>▤</span>} label={t("card.mem")} value={formatCompactPercent(node.ramPct)} detail={`${formatBytes(node.ramUsed)} / ${formatBytes(node.ramTotal)}`} fraction={node.ramPct / 100} color="var(--progress-memory)" />
+      <CompactGauge icon={<span aria-hidden>▤</span>} label="Swap" value={node.swapTotal > 0 ? formatCompactPercent((node.swapUsed / node.swapTotal) * 100) : "0%"} detail={node.swapTotal > 0 ? `${formatBytes(node.swapUsed)} / ${formatBytes(node.swapTotal)}` : t("common.unconfigured")} fraction={node.swapTotal > 0 ? node.swapUsed / node.swapTotal : 0} color="var(--progress-swap)" />
+      <CompactGauge icon={<span aria-hidden>◫</span>} label={t("card.disk")} value={formatCompactPercent(node.diskPct)} detail={`${formatBytes(node.diskUsed)} / ${formatBytes(node.diskTotal)}`} fraction={node.diskPct / 100} color="var(--progress-disk)" />
+      <CompactGauge icon={<span aria-hidden>≋</span>} label={t("card.load")} value={node.load1.toFixed(2)} detail={`${node.load5.toFixed(2)} / ${node.load15.toFixed(2)}`} fraction={loadFraction} color="var(--progress-load)" />
     </div>
   );
 }
@@ -357,23 +386,33 @@ function CompactNodeInfoStrip({
   showTrafficTotal: boolean;
   showConnections: boolean;
 }) {
+  const { t } = useLanguage();
   const infoTileCount = 1 + (showTrafficTotal ? 1 : 0) + (showConnections ? 1 : 0);
 
   return (
     <div className="compact-node-info-strip" style={{ "--compact-info-columns": infoTileCount } as CSSProperties}>
-      <CompactInfoTile label="实时速率" color="var(--progress-cpu)">
+      <CompactInfoTile label={t("card.liveRate")} color="var(--progress-cpu)">
         <CompactInfoRow icon={<span aria-hidden>↑</span>} value={upRate.value} unit={upRate.unit} color={speedRateColor(upRate.unit)} />
         <CompactInfoRow icon={<span aria-hidden>↓</span>} value={downRate.value} unit={downRate.unit} color={speedRateColor(downRate.unit)} />
         <CompactTrafficPulse up={trafficTrend.up} down={trafficTrend.down} />
       </CompactInfoTile>
       {showTrafficTotal && (
-        <CompactInfoTile label="累计流量" color="var(--fg-dark)">
-          <CompactInfoRow icon={<span aria-hidden aria-label="上行">↑</span>} value={formatBytes(node.trafficUp)} />
-          <CompactInfoRow icon={<span aria-hidden aria-label="下行">↓</span>} value={formatBytes(node.trafficDown)} />
+        <CompactInfoTile label={t("card.totalTraffic")} color="var(--fg-dark)">
+          <div className="compact-traffic-total">
+            <span className="compact-traffic-arrows" aria-hidden>
+              <span className="is-up">↑</span>
+              <span className="is-down">↓</span>
+            </span>
+            <CompactTrafficSpark up={trafficTrend.up} down={trafficTrend.down} />
+            <span className="compact-traffic-values">
+              <span>{formatBytes(node.trafficUp)}</span>
+              <span>{formatBytes(node.trafficDown)}</span>
+            </span>
+          </div>
         </CompactInfoTile>
       )}
       {showConnections && (
-        <CompactInfoTile label="连接数" color="var(--progress-network)">
+        <CompactInfoTile label={t("card.conns")} color="var(--progress-network)">
           <CompactInfoRow icon={<span aria-hidden>≋</span>} label="TCP" value={node.connectionsTcp.toLocaleString()} color="var(--progress-network)" />
           <CompactInfoRow icon={<span aria-hidden>≋</span>} label="UDP" value={node.connectionsUdp.toLocaleString()} />
         </CompactInfoTile>
@@ -383,6 +422,7 @@ function CompactNodeInfoStrip({
 }
 
 function CompactTrafficBar({ traffic, uptimeLabel }: { traffic: TrafficDisplay; uptimeLabel: string }) {
+  const { t } = useLanguage();
   const fillFraction =
     traffic.fraction > 0
       ? Math.max(clamp01(traffic.fraction), TRAFFIC_SLIVER_RATIO / 18)
@@ -393,12 +433,12 @@ function CompactTrafficBar({ traffic, uptimeLabel }: { traffic: TrafficDisplay; 
   } as CSSProperties;
 
   return (
-    <div className="compact-node-traffic" style={style} title={`流量 · ${traffic.typeLabel} · ${traffic.detail}${uptimeLabel ? ` · ${uptimeLabel}` : ""}`}>
+    <div className="compact-node-traffic" style={style} title={`${t("card.traffic")} · ${traffic.typeLabel} · ${traffic.detail}${uptimeLabel ? ` · ${uptimeLabel}` : ""}`}>
       {uptimeLabel ? (
         <div className="compact-node-traffic-body has-uptime">
           <span className="compact-node-traffic-label">
             <span aria-hidden>▤</span>
-            <span>流量</span>
+            <span>{t("card.traffic")}</span>
           </span>
           <span className="compact-node-gauge-track" aria-hidden />
           <span className="compact-node-traffic-uptime">{uptimeLabel}</span>
@@ -409,7 +449,7 @@ function CompactTrafficBar({ traffic, uptimeLabel }: { traffic: TrafficDisplay; 
           <div className="compact-node-traffic-head">
             <span className="compact-node-traffic-label">
               <span aria-hidden>▤</span>
-              <span>流量</span>
+              <span>{t("card.traffic")}</span>
             </span>
             <span className="compact-node-traffic-value">{traffic.detail}</span>
           </div>
@@ -437,17 +477,18 @@ const CompactNodeHealth = memo(function CompactNodeHealth({
   pingLoading: boolean;
   pingError: boolean;
 }) {
-  const { text: emptyText } = pingEmptyLabels(hasRealHomepagePingBinding, pingLoading, pingError);
+  const { t } = useLanguage();
+  const { text: emptyText } = pingEmptyLabels(hasRealHomepagePingBinding, t, pingLoading, pingError);
   return (
     <div
       className="compact-node-bottom"
       data-ping-state={ping.loadState ?? "ready"}
-      title={pingError && (ping.lastValue != null || ping.loss != null) ? "首页 Ping 刷新失败，显示上次数据" : undefined}
+      title={pingError && (ping.lastValue != null || ping.loss != null) ? t("card.homePing.refreshFail") : undefined}
     >
-      <CompactHealthItem icon={<span aria-hidden>◔</span>} label="延迟" value={ping.lastValue != null ? Math.round(ping.lastValue).toString() : emptyText} unit={ping.lastValue != null ? "ms" : undefined} color={latencyColor}>
+      <CompactHealthItem icon={<span aria-hidden>◔</span>} label={t("ping.latency")} value={ping.lastValue != null ? Math.round(ping.lastValue).toString() : emptyText} unit={ping.lastValue != null ? "ms" : undefined} color={latencyColor}>
         <HealthBars buckets={pingBuckets} kind="latency" />
       </CompactHealthItem>
-      <CompactHealthItem icon={<span aria-hidden>⊘</span>} label="丢包" value={ping.loss != null ? ping.loss.toFixed(1) : emptyText} unit={ping.loss != null ? "%" : undefined} color={lossColor}>
+      <CompactHealthItem icon={<span aria-hidden>⊘</span>} label={t("ping.loss")} value={ping.loss != null ? ping.loss.toFixed(1) : emptyText} unit={ping.loss != null ? "%" : undefined} color={lossColor}>
         <HealthBars buckets={pingBuckets} kind="loss" />
       </CompactHealthItem>
     </div>
@@ -455,6 +496,7 @@ const CompactNodeHealth = memo(function CompactNodeHealth({
 });
 
 export const CompactNodeCard = memo(function CompactNodeCard({ uuid }: { uuid: string }) {
+  const { t } = useLanguage();
   const model = useNodeCardModel(uuid, {
     pingBucketCount: HOMEPAGE_PING_BUCKET_COUNT,
     includeMultiPing: true,
@@ -488,7 +530,7 @@ export const CompactNodeCard = memo(function CompactNodeCard({ uuid }: { uuid: s
   const showTrafficTotal = themeSettings.isReady && themeSettings.compactShowTrafficTotal;
   const showUptime = themeSettings.isReady && themeSettings.compactShowUptime;
   const showConnections = themeSettings.isReady && themeSettings.showConnections;
-  const uptimeLabel = showUptime && !isOffline ? formatCompactUptime(node.uptime) : "";
+  const uptimeLabel = showUptime && !isOffline ? formatCompactUptime(node.uptime, t) : "";
 
   return (
     <article className={clsx("compact-node-card", isOffline && "is-offline")}>
@@ -520,8 +562,8 @@ export const CompactNodeCard = memo(function CompactNodeCard({ uuid }: { uuid: s
       <Link
         to={`/server/${encodeURIComponent(uuid)}`}
         className="card-stretched-link"
-        aria-label={nodeDetailLinkLabels(node.name, osName).ariaLabel}
-        title={nodeDetailLinkLabels(node.name, osName).title}
+        aria-label={nodeDetailLinkLabels(node.name, osName, t).ariaLabel}
+        title={nodeDetailLinkLabels(node.name, osName, t).title}
       />
     </article>
   );

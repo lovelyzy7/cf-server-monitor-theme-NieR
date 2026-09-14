@@ -7,6 +7,18 @@ import {
 
 const HOUR = 60 * 60 * 1000;
 
+/** 测试用 zh 翻译 stub：保持断言使用中文文案。 */
+const tZh = (key: string): string =>
+  (
+    {
+      "chart.days": "天",
+      "chart.hours": "小时",
+      "chart.minutes": "分钟",
+      "chart.coverageFull": "覆盖完整",
+      "chart.coverageActual": "实际覆盖",
+    } as Record<string, string>
+  )[key] ?? key;
+
 describe("history range metadata", () => {
   it("converts the requested API range into a fixed chart range", () => {
     expect(
@@ -23,6 +35,7 @@ describe("history range metadata", () => {
         { rangeStartMs: 1_000_000, rangeEndMs: 4_600_000, intervalSeconds: 60 },
         4_000,
         2_000,
+        tZh,
       ),
     ).toBeNull();
   });
@@ -36,6 +49,7 @@ describe("history range metadata", () => {
         { rangeStartMs: start, rangeEndMs: end, intervalSeconds: 15 * 60 },
         actualStart / 1000,
         end / 1000,
+        tZh,
       ),
     ).toBe("实际覆盖 2 天 / 7 天");
   });
@@ -48,6 +62,7 @@ describe("history range metadata", () => {
         { rangeStartMs: start, rangeEndMs: end, intervalSeconds: 15 * 60 },
         (start + 15 * 60 * 1000) / 1000,
         (end - 15 * 60 * 1000) / 1000,
+        tZh,
       ),
     ).toBe("覆盖完整 1 天");
   });
@@ -64,6 +79,7 @@ describe("history range metadata", () => {
         { rangeStartMs: end - HOUR, rangeEndMs: end, intervalSeconds },
         records[0].time / 1000,
         records[records.length - 1].time / 1000,
+        tZh,
       ),
     ).toBe("覆盖完整 1 小时");
   });

@@ -1,3 +1,4 @@
+import { translate } from "@/hooks/useLanguage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/Spinner";
@@ -40,7 +41,7 @@ function loadTurnstileScript(): Promise<void> {
     script.onload = () => resolve();
     script.onerror = () => {
       scriptPromise = null;
-      reject(new Error("Turnstile 脚本加载失败"));
+      reject(new Error(translate("turnstile.scriptFail")));
     };
     document.head.append(script);
   });
@@ -69,11 +70,11 @@ export function TurnstileGate() {
         setTurnstileToken(token);
         await getSiteConfig();
         if (!getTurnstileVerified()) {
-          throw new Error("验证未通过，请重试");
+          throw new Error(translate("turnstile.fail"));
         }
         await queryClient.invalidateQueries();
       } catch (submitError) {
-        setError(submitError instanceof Error ? submitError.message : "验证失败");
+        setError(submitError instanceof Error ? submitError.message : translate("turnstile.verifyFail"));
       } finally {
         setVerifying(false);
       }
@@ -94,13 +95,13 @@ export function TurnstileGate() {
           callback: (token) => {
             void submitToken(token);
           },
-          "error-callback": () => setError("人机验证组件加载失败"),
-          "expired-callback": () => setError("验证已过期，请重新完成验证"),
+          "error-callback": () => setError(translate("turnstile.widgetFail")),
+          "expired-callback": () => setError(translate("turnstile.expired")),
         });
       })
       .catch((loadError: unknown) => {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "验证组件加载失败");
+          setError(loadError instanceof Error ? loadError.message : translate("turnstile.componentFail"));
         }
       });
 

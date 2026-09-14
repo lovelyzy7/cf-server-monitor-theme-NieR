@@ -1,3 +1,4 @@
+import { translate } from "@/hooks/useLanguage";
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import type uPlot from "uplot";
 
@@ -70,17 +71,17 @@ interface TimeRangeOption {
   value: number;
 }
 
-// load 和 ping 共用同一套历史区间预设；唯一区别是是否在前面加 "实时" 选项，这由
+// load 和 ping 共用同一套历史区间预设；唯一区别是是否在前面加 translate("common.realtime") 选项，这由
 // buildHistoryRangeOptions 的 includeRealtime 标志处理，而非改预设列表本身。
 // 取值必须落在 CF-Server-Monitor `/api/history/all` 支持的档位上（最长 7 天）。
 const TIME_RANGE_OPTIONS: TimeRangeOption[] = [
-  { label: "1 小时", value: 1 },
-  { label: "6 小时", value: 6 },
-  { label: "12 小时", value: 12 },
-  { label: "1 天", value: 24 },
-  { label: "2 天", value: 48 },
-  { label: "7 天", value: 168 },
-  { label: "14 天", value: 336 },
+  { label: translate("range.h1"), value: 1 },
+  { label: translate("range.h6"), value: 6 },
+  { label: translate("range.h12"), value: 12 },
+  { label: translate("range.d1"), value: 24 },
+  { label: translate("range.d2"), value: 48 },
+  { label: translate("range.d7"), value: 168 },
+  { label: translate("range.d14"), value: 336 },
 ];
 
 const PING_TIME_RANGE_OPTIONS: TimeRangeOption[] = [...TIME_RANGE_OPTIONS];
@@ -99,7 +100,7 @@ function buildHistoryRangeOptions(
   maxHours: number | null | undefined,
   includeRealtime: boolean,
 ) {
-  const options = includeRealtime ? [{ label: "实时", value: 0 }] : [];
+  const options = includeRealtime ? [{ label: translate("common.realtime"), value: 0 }] : [];
   if (!Number.isFinite(maxHours) || !maxHours || maxHours <= 0) {
     return [...options, ...presets];
   }

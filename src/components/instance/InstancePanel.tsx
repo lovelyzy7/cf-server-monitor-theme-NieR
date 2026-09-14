@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useLanguage } from "@/hooks/useLanguage";
 import { clsx } from "clsx";
 import { Spinner } from "@/components/ui/Spinner";
 
@@ -39,11 +40,12 @@ export function InstancePanel({
 }
 
 export function InstanceChartLoading({ title }: { title: string }) {
+  const { t } = useLanguage();
   return (
     <InstancePanel title={title}>
       <div className="instance-chart-loading" aria-busy>
         <Spinner size={22} label="" />
-        <span>加载中…</span>
+        <span>{t("common.loading")}</span>
       </div>
     </InstancePanel>
   );

@@ -82,9 +82,9 @@ export function Instance() {
 
   if (!meta) {
     const message = storeStatus.hydrated
-      ? "找不到这个实例，它可能已被删除或链接无效。"
+      ? t("detail.notFound")
       : storeStatus.nodeInfoError
-        ? "节点列表加载失败，系统正在自动重试。"
+        ? t("detail.listFail")
         : null;
     return (
       <div className="center-box">
@@ -111,17 +111,17 @@ export function Instance() {
 
       <div className="panel panel-corners">
         <dl className="kv">
-          <dt>地区</dt>
+          <dt>{t("detail.region")}</dt>
           <dd><Flag region={meta.region} size={12} /> {meta.region || "—"}</dd>
-          <dt>分组</dt>
+          <dt>{t("detail.group")}</dt>
           <dd>{meta.group || "—"}</dd>
-          <dt>系统</dt>
+          <dt>{t("detail.os")}</dt>
           <dd><OsLogo value={meta.os} size={14} /> {meta.os || "—"}</dd>
-          <dt>内核</dt>
+          <dt>{t("detail.kernel")}</dt>
           <dd>{meta.kernel_version || "—"}</dd>
           <dt>CPU</dt>
           <dd>{meta.cpu_name || "—"}{meta.cpu_cores ? ` × ${meta.cpu_cores}` : ""}</dd>
-          <dt>架构</dt>
+          <dt>{t("detail.arch")}</dt>
           <dd>{meta.arch || "—"}</dd>
           <dt>GPU</dt>
           <dd>{meta.gpu_name || "—"}</dd>
@@ -135,8 +135,8 @@ export function Instance() {
           )}
           {uptime && (
             <>
-              <dt>运行时间</dt>
-              <dd>{uptime.value} {uptime.unit}</dd>
+              <dt>{t("detail.uptime")}</dt>
+              <dd>{uptime.value} {uptime.unit ? t(uptime.unit) : ""}</dd>
             </>
           )}
         </dl>
@@ -145,20 +145,20 @@ export function Instance() {
       <div className="panel" style={{ marginTop: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <MetricBar label="CPU" percent={metrics?.cpuPct ?? 0} colorVar="--progress-cpu" valueText={metrics ? `${Math.round(metrics.cpuPct)}%` : undefined} />
-          <MetricBar label="内存" percent={metrics?.ramPct ?? 0} colorVar="--progress-memory" valueText={metrics ? `${formatBytes(metrics.ramUsed)} / ${formatBytes(metrics.ramTotal)}` : undefined} />
+          <MetricBar label={t("detail.mem")} percent={metrics?.ramPct ?? 0} colorVar="--progress-memory" valueText={metrics ? `${formatBytes(metrics.ramUsed)} / ${formatBytes(metrics.ramTotal)}` : undefined} />
           <MetricBar label="Swap" percent={metrics && metrics.swapTotal > 0 ? (metrics.swapUsed / metrics.swapTotal) * 100 : 0} colorVar="--progress-swap" />
-          <MetricBar label="磁盘" percent={metrics?.diskPct ?? 0} colorVar="--progress-disk" valueText={metrics ? `${formatBytes(metrics.diskUsed)} / ${formatBytes(metrics.diskTotal)}` : undefined} />
+          <MetricBar label={t("detail.disk")} percent={metrics?.diskPct ?? 0} colorVar="--progress-disk" valueText={metrics ? `${formatBytes(metrics.diskUsed)} / ${formatBytes(metrics.diskTotal)}` : undefined} />
         </div>
         <dl className="kv" style={{ marginTop: 12 }}>
-          <dt>↓ 下行</dt>
+          <dt>{t("card.down")}</dt>
           <dd>{formatByteRateLabel(metrics?.netDown)}</dd>
-          <dt>↑ 上行</dt>
+          <dt>{t("card.up")}</dt>
           <dd>{formatByteRateLabel(metrics?.netUp)}</dd>
-          <dt>负载</dt>
+          <dt>{t("detail.load")}</dt>
           <dd>{metrics ? `${metrics.load1.toFixed(2)} / ${metrics.load5.toFixed(2)} / ${metrics.load15.toFixed(2)}` : "—"}</dd>
-          <dt>连接数</dt>
+          <dt>{t("detail.conns")}</dt>
           <dd>{metrics ? `TCP ${metrics.connectionsTcp} · UDP ${metrics.connectionsUdp}` : "—"}</dd>
-          <dt>进程</dt>
+          <dt>{t("detail.proc")}</dt>
           <dd>{metrics?.process ?? "—"}</dd>
         </dl>
       </div>

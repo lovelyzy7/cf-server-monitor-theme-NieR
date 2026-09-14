@@ -1,3 +1,4 @@
+import { translate, useLanguage } from "@/hooks/useLanguage";
 import { useCallback, useEffect, useState } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 import { usePreferences } from "@/hooks/usePreferences";
@@ -10,9 +11,9 @@ import {
 } from "@/hooks/useMetricColors";
 
 const DARK_DEPTH_PRESETS = [
-  { value: 0, label: "灰黑", title: "当前默认色" },
-  { value: 60, label: "深黑", title: "保留少量蓝灰层次" },
-  { value: 100, label: "纯黑", title: "纯黑画布，卡片保留层级" },
+  { value: 0, label: translate("colors.grayBlack"), title: translate("colors.current") },
+  { value: 60, label: translate("colors.deep"), title: translate("colors.keepBlue") },
+  { value: 100, label: translate("colors.pure"), title: translate("colors.pureDesc") },
 ] as const;
 
 const ICONS: Record<MetricColorKey, string> = {
@@ -40,6 +41,7 @@ const PRESET_COLORS = [
 const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
+  const { t } = useLanguage();
   const {
     colors,
     darkDepth,
@@ -84,9 +86,9 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
   };
 
   return (
-    <div className="metric-color-picker" role="group" aria-label="卡片配色" hidden={hidden}>
+    <div className="metric-color-picker" role="group" aria-label={t("shell.colors")} hidden={hidden}>
       <div className="metric-color-picker-head">
-        {!canSaveToBackend && <span>配色自定义</span>}
+        {!canSaveToBackend && <span>{t("colors.custom")}</span>}
         <div className="metric-color-head-actions">
           {canSaveToBackend && (
             <button
@@ -94,10 +96,10 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
               className="metric-color-save-backend"
               onClick={() => void saveToBackend()}
               disabled={savingToBackend}
-              title="把当前配色（连同其它本机设置）写到后端，成为所有设备与访客的默认值"
+              title={t("colors.saveSiteHint")}
             >
               {savingToBackend ? <Spinner size={12} /> : <span aria-hidden>⇧</span>}
-              <span>{savingToBackend ? "保存中" : "保存到后端"}</span>
+              <span>{savingToBackend ? t("manage.saving") : t("manage.saveSite")}</span>
             </button>
           )}
           <button
@@ -109,7 +111,7 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
             }}
             disabled={!hasLocalOverrides}
           >
-            全部重置
+            {t("colors.resetAll")}
           </button>
         </div>
       </div>
@@ -118,11 +120,11 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
           {backendSaveState.text}
         </div>
       )}
-      {saveError && <div className="metric-color-error">保存失败（请确认已登录管理员）</div>}
+      {saveError && <div className="metric-color-error">{t("manage.saveFail")}（{t("manage.loginExpired")}）</div>}
       <div className="metric-color-group">
-        <div className="metric-color-group-title">暗色背景</div>
+        <div className="metric-color-group-title">{t("colors.darkBg")}</div>
         <div className="dark-depth-control">
-          <div className="dark-depth-presets" role="group" aria-label="暗色深度预设">
+          <div className="dark-depth-presets" role="group" aria-label={t("colors.depth")}>
             {DARK_DEPTH_PRESETS.map((preset) => (
               <button
                 key={preset.value}
@@ -141,12 +143,12 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
           </div>
           <label className="dark-depth-range">
             <span className="dark-depth-range-head">
-              <span>黑色程度</span>
+              <span>{t("colors.blackness")}</span>
               <output>{darkDepth}%</output>
             </span>
-            <input type="range" min="0" max="100" step="1" value={darkDepth} aria-label="黑色程度" onChange={(event) => setDarkDepth(Number(event.target.value))} />
+            <input type="range" min="0" max="100" step="1" value={darkDepth} aria-label={t("colors.blackness")} onChange={(event) => setDarkDepth(Number(event.target.value))} />
           </label>
-          {resolvedAppearance !== "dark" && <p className="dark-depth-hint">切换到深色模式后查看实际效果</p>}
+          {resolvedAppearance !== "dark" && <p className="dark-depth-hint">{t("colors.darkHint")}</p>}
         </div>
       </div>
       {METRIC_COLOR_GROUPS.map((group) => (
@@ -166,8 +168,8 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
                     className="metric-color-swatch"
                     style={{ background: current }}
                     aria-expanded={open}
-                    aria-label={`${label} 颜色`}
-                    title="选择颜色"
+                    aria-label={t("colors.colorFor").replace("{label}", label)}
+                    title={t("colors.pick")}
                     onClick={() => togglePicker(key)}
                   >
                     <span className="metric-color-swatch-arrow" aria-hidden>▾</span>
@@ -180,13 +182,13 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
                       refreshBase();
                     }}
                     disabled={!overridden}
-                    aria-label={`恢复 ${label} 默认色`}
-                    title="恢复默认"
+                    aria-label={t("colors.restoreFor").replace("{label}", label)}
+                    title={t("colors.restore")}
                   >
                     <span aria-hidden>↺</span>
                   </button>
                   {open && (
-                    <div className="metric-color-popover" role="group" aria-label={`${label} 颜色选择`}>
+                    <div className="metric-color-popover" role="group" aria-label={t("colors.pickFor").replace("{label}", label)}>
                       <div className="metric-color-presets">
                         {PRESET_COLORS.map((preset) => (
                           <button
@@ -214,7 +216,7 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
                           onKeyDown={(event) => {
                             if (event.key === "Enter") setHexDraft(valueOf(key));
                           }}
-                          aria-label={`${label} 十六进制颜色`}
+                          aria-label={t("colors.hexFor").replace("{label}", label)}
                           spellCheck={false}
                         />
                       </label>

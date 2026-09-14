@@ -108,16 +108,18 @@ export function formatByteRateLabel(bytesPerSec: number | undefined | null): str
   return `${value} ${unit}`;
 }
 
-export function formatUptimeDays(seconds: number): { value: string; unit: string } {
+export function formatUptimeDays(seconds: number): { value: string; unit: UptimeUnit } {
   if (!Number.isFinite(seconds) || seconds <= 0) return { value: "—", unit: "" };
   const days = seconds / 86400;
-  if (days >= 1) return { value: Math.floor(days).toString(), unit: "天" };
+  if (days >= 1) return { value: Math.floor(days).toString(), unit: "chart.days" };
   const hours = seconds / 3600;
-  if (hours >= 1) return { value: Math.floor(hours).toString(), unit: "小时" };
+  if (hours >= 1) return { value: Math.floor(hours).toString(), unit: "chart.hours" };
   // 不足 1 分钟向上取整,避免刚上线显示成「0 分钟」而 <=0 又显示「—」的口径分裂。
   const minutes = Math.max(1, Math.floor(seconds / 60));
-  return { value: minutes.toString(), unit: "分钟" };
+  return { value: minutes.toString(), unit: "chart.minutes" };
 }
+
+export type UptimeUnit = "" | "chart.days" | "chart.hours" | "chart.minutes";
 
 // 将 `expired_at` 解析为毫秒；空值、Go 零时和 0/-1 哨兵均表示无到期。
 export function resolveExpireTimestamp(

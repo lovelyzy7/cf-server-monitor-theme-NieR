@@ -6,16 +6,16 @@ import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useViewMode } from "@/hooks/useViewMode";
 import { useHomeNodeSummaries, useNodeStoreStatus } from "@/hooks/useNode";
 import { type PingHistoryRefreshState } from "@/hooks/usePingHistoryRefresh";
-import { useLanguage } from "@/hooks/useLanguage";
+import { translate, useLanguage, type I18nKey } from "@/hooks/useLanguage";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { getAdminUrl } from "@/services/cfsm/config";
 import { clsx } from "clsx";
 import type { Appearance, NodeViewMode } from "@/utils/themeSettings";
 
-const APPEARANCE_OPTIONS: Array<{ value: Appearance; label: string; title: string }> = [
-  { value: "light", label: "LIGHT", title: "浅色" },
-  { value: "system", label: "SYSTEM", title: "跟随系统" },
-  { value: "dark", label: "DARK", title: "深色" },
+const APPEARANCE_OPTIONS: Array<{ value: Appearance; label: string; title: I18nKey }> = [
+  { value: "light", label: "LIGHT", title: "appearance.light" },
+  { value: "system", label: "SYSTEM", title: "appearance.system" },
+  { value: "dark", label: "DARK", title: "appearance.dark" },
 ];
 
 const APPEARANCE_NEXT: Record<Appearance, Appearance> = {
@@ -32,13 +32,13 @@ const VIEW_MODE_OPTIONS: Array<{ value: NodeViewMode; label: string }> = [
 ];
 
 function buildRefreshTitle(state: PingHistoryRefreshState): string {
-  if (state.status === "loading") return `正在拉取 ${state.nodeCount} 台节点最近 1 小时的延迟历史…`;
-  if (state.status === "warn") return "30 分钟内已经刷新过；确实要再拉一次就再点一下";
-  if (state.status === "error") return "刷新失败，点击重试";
-  const base = `刷新延迟数据：拉取 ${state.nodeCount} 台节点最近 1 小时的真实采样`;
+  if (state.status === "loading") return translate("shell.refreshLoading").replace("{n}", String(state.nodeCount));
+  if (state.status === "warn") return translate("shell.refreshWarn");
+  if (state.status === "error") return translate("shell.refreshFail");
+  const base = translate("shell.refreshBase").replace("{n}", String(state.nodeCount));
   if (state.lastRefreshedAt == null) return base;
   const at = new Date(state.lastRefreshedAt).toLocaleTimeString("zh-CN", { hour12: false });
-  return `${base}\n上次刷新 ${at}`;
+  return `${base}\n${translate("shell.lastRefresh")} ${at}`;
 }
 
 const MetricColorPicker = lazy(() =>
@@ -46,6 +46,7 @@ const MetricColorPicker = lazy(() =>
 );
 
 function ViewModeDropdown() {
+  const { t } = useLanguage();
   const { mode, setMode } = useViewMode();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -80,13 +81,13 @@ function ViewModeDropdown() {
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        title="切换卡片视图"
+        title={t("shell.viewSwitch")}
         onClick={() => setOpen((value) => !value)}
       >
         {current} <span aria-hidden>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
-        <div id={panelId} className="home-sort-panel" role="group" aria-label="卡片视图">
+        <div id={panelId} className="home-sort-panel" role="group" aria-label={t("shell.cardView")}>
           {VIEW_MODE_OPTIONS.map((option) => (
             <button
               key={option.value}
@@ -213,14 +214,14 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           >
             <span className={clsx("refresh-icon", refreshActive && "spin")} aria-hidden /> REFRESH
           </button>
-          <div className="control-group" role="group" aria-label="外观选择">
+          <div className="control-group" role="group" aria-label={t("shell.appearance")}>
             {APPEARANCE_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 className={clsx("control-button", appearance === option.value && "is-active")}
                 aria-pressed={appearance === option.value}
-                title={option.title}
+                title={t(option.title)}
                 onClick={() => setAppearance(option.value)}
               >
                 {option.label}
@@ -242,7 +243,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
             type="button"
             className={clsx("control-button terminal-btn-colors", colorsOpen && "is-active")}
             aria-pressed={colorsOpen}
-            title="卡片配色"
+            title={t("shell.colors")}
             onClick={() => {
               setColorsMounted(true);
               setColorsOpen((value) => !value);
@@ -250,14 +251,14 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           >
             COLORS
           </button>
-          <Link to="/?view=theme-manage" className="control-button terminal-btn-settings" title="主题设置">
+          <Link to="/?view=theme-manage" className="control-button terminal-btn-settings" title={t("nav.settings")}>
             SETTINGS
           </Link>
           {showAdmin && (
             <a
               href={getAdminUrl()}
               className="control-button terminal-btn-admin"
-              title={me?.logged_in ? "管理后台" : "后台登录"}
+              title={me?.logged_in ? t("shell.adminPanel") : t("shell.adminLogin")}
             >
               ADMIN
             </a>
@@ -266,10 +267,10 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
             type="button"
             className="control-button terminal-btn-lang"
             onClick={() => setLang(lang === "zh" ? "en" : "zh")}
-            aria-label="切换语言"
-            title="切换语言 / Switch language"
+            aria-label={t("lang.switch")}
+            title={t("lang.switch")}
           >
-            {lang === "zh" ? "EN" : "中文"}
+            {lang === "zh" ? "EN" : t("lang.zh")}
           </button>
           {/* 移动端：下拉栏按钮（桌面隐藏） */}
           <button
@@ -278,8 +279,8 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
             className="control-button terminal-menu"
             aria-haspopup="true"
             aria-expanded={menuOpen}
-            aria-label="更多"
-            title="更多"
+            aria-label={t("shell.more")}
+            title={t("shell.more")}
             onClick={() => setMenuOpen((value) => !value)}
           >
             <span className="menu-icon" aria-hidden />
@@ -290,7 +291,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
         {navLink("/", t("nav.status"), () => location.pathname === "/" && !isThemeManageView)}
         {navLink("/traffic", t("nav.traffic"))}
       </nav>
-      <nav className="mobile-nav" aria-label="移动端导航">
+      <nav className="mobile-nav" aria-label={t("shell.mobileNav")}>
         <Link to="/" className={location.pathname === "/" && !isThemeManageView ? "active" : undefined}>
           <span aria-hidden>▣</span>
           <span>{t("nav.status")}</span>
@@ -319,7 +320,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
       )}
       <div className="terminal-menu-picker" ref={menuRootRef}>
         {menuOpen && (
-          <div className="home-sort-panel" role="group" aria-label="更多">
+          <div className="home-sort-panel" role="group" aria-label={t("shell.more")}>
             {VIEW_MODE_OPTIONS.map((option) => (
               <button
                 key={option.value}

@@ -6,6 +6,7 @@ import {
   type HomeSortField,
 } from "@/utils/homeSort";
 import type { HomeSortControlState } from "@/hooks/useHomeSort";
+import { useLanguage, type I18nKey } from "@/hooks/useLanguage";
 
 // 方向箭头：↑ 升序 / ↓ 降序。
 function SortIcon({ direction }: { direction: HomeSortDirection }) {
@@ -14,6 +15,7 @@ function SortIcon({ direction }: { direction: HomeSortDirection }) {
 
 export function HomeSortControl({ state }: { state: HomeSortControlState }) {
   const { field, direction, setField, toggleDirection } = state;
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -51,16 +53,16 @@ export function HomeSortControl({ state }: { state: HomeSortControlState }) {
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        aria-label={`排序方式，当前${HOME_SORT_FIELD_LABELS[field]}${direction === "asc" ? "升序" : "降序"}`}
-        title={`排序：${HOME_SORT_FIELD_LABELS[field]}（${direction === "asc" ? "升序" : "降序"}）`}
+        aria-label={`${t("sort.mode")}，${t(HOME_SORT_FIELD_LABELS[field] as I18nKey)}${direction === "asc" ? t("sort.ascText") : t("sort.descText")}`}
+        title={`${t("sort.mode")}：${t(HOME_SORT_FIELD_LABELS[field] as I18nKey)}（${direction === "asc" ? t("sort.ascText") : t("sort.descText")}）`}
         onClick={() => setOpen((value) => !value)}
       >
         <SortIcon direction={direction} />
-        <span>{HOME_SORT_FIELD_LABELS[field]}</span>
+        <span>{t(HOME_SORT_FIELD_LABELS[field] as I18nKey)}</span>
         <span aria-hidden>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
-        <div id={panelId} className="home-sort-panel" role="group" aria-label="排序方式">
+        <div id={panelId} className="home-sort-panel" role="group" aria-label={t("sort.mode")}>
           {HOME_SORT_FIELDS.map((option) => {
             const active = option === field;
             return (
@@ -72,7 +74,7 @@ export function HomeSortControl({ state }: { state: HomeSortControlState }) {
                 className="home-sort-item"
                 onClick={() => select(option)}
               >
-                <span className="home-sort-item-label">{HOME_SORT_FIELD_LABELS[option]}</span>
+                <span className="home-sort-item-label">{t(HOME_SORT_FIELD_LABELS[option] as I18nKey)}</span>
                 {active && <SortIcon direction={direction} />}
               </button>
             );

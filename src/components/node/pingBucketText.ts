@@ -1,3 +1,4 @@
+import type { I18nKey } from "@/hooks/useLanguage";
 import type { PingOverviewBucket } from "@/types/cfsm";
 import { trimFixed } from "@/utils/format";
 
@@ -19,18 +20,18 @@ function formatPingBucketWindow(bucket: PingOverviewBucket | null) {
   return `${startText} - ${endText}`;
 }
 
-function formatLatencyBucketSummary(bucket: PingOverviewBucket | null) {
+function formatLatencyBucketSummary(bucket: PingOverviewBucket | null, t: (key: I18nKey) => string) {
   if (!bucket) return "—";
   // 掉线要和「探测没跑到」区分开：前者是节点整台没了，后者只是这一格没样本。
-  if (bucket.offline) return "离线";
+  if (bucket.offline) return t("list.offline");
   if (bucket.value != null) return `${trimFixed(bucket.value, 1)} ms`;
-  return bucket.total > 0 ? "失败" : "无样本";
+  return bucket.total > 0 ? t("chart.failShort") : t("card.noSamples");
 }
 
-function formatLossBucketSummary(bucket: PingOverviewBucket | null) {
+function formatLossBucketSummary(bucket: PingOverviewBucket | null, t: (key: I18nKey) => string) {
   if (!bucket) return "—";
-  if (bucket.offline) return "离线";
-  if (bucket.total <= 0 || bucket.loss == null) return "无样本";
+  if (bucket.offline) return t("list.offline");
+  if (bucket.total <= 0 || bucket.loss == null) return t("card.noSamples");
   // 只显示百分比：后端给的本来就是丢包百分比而不是"丢了几个包"，写成 x/y 会误导；
   // 而 total 现在是**加权**样本数（后端窗口的点比本地实测疏几倍，要抵几份），
   // 已经不等于"采了几次"，报出来只会让人算不明白。
@@ -40,11 +41,12 @@ function formatLossBucketSummary(bucket: PingOverviewBucket | null) {
 export function formatHealthBucketTooltip(
   bucket: PingOverviewBucket,
   kind: "latency" | "loss",
+  t: (key: I18nKey) => string,
 ) {
   const window = formatPingBucketWindow(bucket);
   const summary =
     kind === "latency"
-      ? formatLatencyBucketSummary(bucket)
-      : formatLossBucketSummary(bucket);
+      ? formatLatencyBucketSummary(bucket, t)
+      : formatLossBucketSummary(bucket, t);
   return window ? `${window} · ${summary}` : summary;
 }

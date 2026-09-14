@@ -10,9 +10,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useAllNodeMeta, useHomeNodeSummaries } from "@/hooks/useNode";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
+import { useLanguage } from "@/hooks/useLanguage";
 import { collectMatchingNodeUuids } from "@/utils/nodeIdentity";
 
 export function InstanceSwitcher({ currentUuid }: { currentUuid: string }) {
+  const { t } = useLanguage();
   const allMeta = useAllNodeMeta();
   const summaries = useHomeNodeSummaries();
   const { hiddenNodes } = useThemeSettings();
@@ -114,8 +116,8 @@ export function InstanceSwitcher({ currentUuid }: { currentUuid: string }) {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
-        aria-label="切换服务器"
-        title="切换服务器"
+        aria-label={t("instance.switch")}
+        title={t("instance.switch")}
         onClick={() => setOpen((value) => !value)}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -127,11 +129,11 @@ export function InstanceSwitcher({ currentUuid }: { currentUuid: string }) {
         <span aria-hidden>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
-        <div id={listId} className="instance-switcher-panel" role="listbox" aria-label="服务器" ref={listRef} onKeyDown={handleListKeyDown}>
+        <div id={listId} className="instance-switcher-panel" role="listbox" aria-label={t("instance.servers")} ref={listRef} onKeyDown={handleListKeyDown}>
           {nodes.map((node, index) => {
             const isActive = node.uuid === currentUuid;
             const status = node.online === true ? "online" : node.online === false ? "offline" : "unknown";
-            const statusLabel = node.online === true ? "在线" : node.online === false ? "离线" : "状态未知";
+            const statusLabel = node.online === true ? t("instance.online") : node.online === false ? t("instance.offline") : t("instance.unknown");
             return (
               <button
                 key={node.uuid}

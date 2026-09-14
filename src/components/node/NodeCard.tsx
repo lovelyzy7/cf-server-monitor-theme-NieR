@@ -72,7 +72,7 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
         {node.group && <span>{node.group} · </span>}
         <span>{node.region || "—"}</span>
         {node.price !== 0 && (
-          <span>{" "}· {node.price === -1 ? "免费" : `${node.currency || "¥"}${node.price}/${formatBillingCycle(node.billing_cycle)}`}</span>
+          <span>{" "}· {node.price === -1 ? t("card.free") : `${node.currency || "¥"}${node.price}/${formatBillingCycle(node.billing_cycle)}`}</span>
         )}
       </div>
 
@@ -82,7 +82,7 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
         <MetricBar label="MEM" percent={merged?.ramPct ?? 0} colorVar="--progress-memory"
           valueText={merged ? `${Math.round(merged.ramPct)}% · ${formatBytes(merged.ramUsed)} / ${formatBytes(merged.ramTotal)}` : undefined} />
         <MetricBar label="SWAP" percent={merged && merged.swapTotal > 0 ? (merged.swapUsed / merged.swapTotal) * 100 : 0} colorVar="--progress-swap"
-          valueText={merged ? (merged.swapTotal > 0 ? `${Math.round((merged.swapUsed / merged.swapTotal) * 100)}% · ${formatBytes(merged.swapUsed)} / ${formatBytes(merged.swapTotal)}` : "0% · 未配置") : undefined} />
+          valueText={merged ? (merged.swapTotal > 0 ? `${Math.round((merged.swapUsed / merged.swapTotal) * 100)}% · ${formatBytes(merged.swapUsed)} / ${formatBytes(merged.swapTotal)}` : `0% · ${t("common.unconfigured")}`) : undefined} />
         <MetricBar label="DISK" percent={merged?.diskPct ?? 0} colorVar="--progress-disk"
           valueText={merged ? `${Math.round(merged.diskPct)}% · ${formatBytes(merged.diskUsed)} / ${formatBytes(merged.diskTotal)}` : undefined} />
       </div>
@@ -111,7 +111,7 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
                   whiteSpace: "nowrap", pointerEvents: "none", zIndex: 5,
                 }}
               >
-                {formatHealthBucketTooltip(m.pingBuckets[hoverLatency], "latency")}
+                {formatHealthBucketTooltip(m.pingBuckets[hoverLatency], "latency", t)}
               </span>
             )}
           </div>
@@ -135,7 +135,7 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
                   whiteSpace: "nowrap", pointerEvents: "none", zIndex: 5,
                 }}
               >
-                {formatHealthBucketTooltip(m.pingBuckets[hoverLoss], "loss")}
+                {formatHealthBucketTooltip(m.pingBuckets[hoverLoss], "loss", t)}
               </span>
             )}
           </div>
@@ -157,7 +157,7 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
         {uptime && (
           <>
             <dt>{t("card.uptime")}</dt>
-            <dd>{uptime.value} {uptime.unit}</dd>
+            <dd>{uptime.value} {uptime.unit ? t(uptime.unit) : ""}</dd>
           </>
         )}
       </dl>

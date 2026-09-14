@@ -11,6 +11,7 @@ import { useHomepagePingOverview } from "@/hooks/usePingOverview";
 import { usePublicConfig } from "@/hooks/usePublicConfig";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { useViewMode } from "@/hooks/useViewMode";
+import { useLanguage } from "@/hooks/useLanguage";
 import { formatBytes, formatByteRate, formatByteRateLabel } from "@/utils/format";
 import { useHiddenNodeUuids } from "@/hooks/useVisibleNodes";
 import { speedRateColor } from "@/utils/metricTone";
@@ -60,8 +61,9 @@ function formatCompactBytes(value: number): string {
 }
 
 function HomeBrand({ siteName }: { siteName: string }) {
+  const { t } = useLanguage();
   return (
-    <header className="home-brand" aria-label="站点名称">
+    <header className="home-brand" aria-label={t("home.siteName")}>
       <h1 className="home-brand-title" title={siteName}>
         {siteName}
       </h1>
@@ -84,11 +86,12 @@ function HomeOverviewCards({
   const trafficCompactLabel = `↑${formatCompactBytes(overview.trafficUp)} ↓${formatCompactBytes(overview.trafficDown)}`;
   const bandwidthDetailLabel = `↑ ${formatByteRateLabel(overview.netUp)} · ↓ ${formatByteRateLabel(overview.netDown)}`;
   const bandwidthCompactLabel = `↑${formatCompactBytes(overview.netUp)} ↓${formatCompactBytes(overview.netDown)}`;
+  const { t } = useLanguage();
 
   return (
-    <section className={`home-overview${dense ? " is-dense" : ""}`} aria-label="首页总览">
+    <section className={`home-overview${dense ? " is-dense" : ""}`} aria-label={t("home.overview")}>
       <article className="overview-card" data-metric="online">
-        <span className="overview-card-label">在线节点</span>
+        <span className="overview-card-label">{t("overview.online")}</span>
         <div className="overview-card-main">
           <p className="overview-card-value">
             {overview.onlineNodes}
@@ -116,7 +119,7 @@ function HomeOverviewCards({
       </article>
 
       <article className="overview-card" data-metric="bandwidth">
-        <span className="overview-card-label">实时带宽</span>
+        <span className="overview-card-label">{t("overview.bandwidth")}</span>
         <div className="overview-card-main">
           <p className="overview-card-value" style={{ color: speedRateColor(rate.unit) }}>
             {rate.value}
@@ -133,7 +136,7 @@ function HomeOverviewCards({
 
       <article className="overview-card" data-metric="traffic">
         <div className="overview-card-head">
-          <span className="overview-card-label">累计流量</span>
+          <span className="overview-card-label">{t("overview.traffic")}</span>
         </div>
         <div className="overview-card-main">
           <p className="overview-card-value">
@@ -161,10 +164,11 @@ function GroupTabs({
   selectedGroup: string;
   onSelectGroup: (group: string) => void;
 }) {
+  const { t } = useLanguage();
   return (
-    <div className="home-group-tabs" role="group" aria-label="节点分组">
+    <div className="home-group-tabs" role="group" aria-label={t("home.groups")}>
       <button type="button" aria-pressed={selectedGroup === HOME_ALL_GROUP} data-active={selectedGroup === HOME_ALL_GROUP ? "true" : "false"} onClick={() => onSelectGroup(HOME_ALL_GROUP)}>
-        全部
+        {t("overview.all")}
       </button>
       {groups.map((group) => (
         <button key={group} type="button" aria-pressed={selectedGroup === group} data-active={selectedGroup === group ? "true" : "false"} onClick={() => onSelectGroup(group)} title={group}>
@@ -184,8 +188,9 @@ function RegionTabs({
   selectedRegion: string;
   onSelectRegion: (region: string) => void;
 }) {
+  const { t } = useLanguage();
   return (
-    <section className="home-region-bar" aria-label="地区筛选">
+    <section className="home-region-bar" aria-label={t("home.filterRegion")}>
       <div className="home-region-chips" role="group">
         {regions.map(({ code, count }) => {
           const active = selectedRegion === code;
@@ -203,13 +208,14 @@ function RegionTabs({
 }
 
 export function NodeGrid() {
+  const { t } = useLanguage();
   const nodes = useHomeNodeSummaries();
   const hiddenUuids = useHiddenNodeUuids();
   const allMeta = useAllNodeMeta();
   const { hydrated: storeHydrated, nodeInfoError } = useNodeStoreStatus();
   const { data: me } = useAuth();
   const { data: publicConfig } = usePublicConfig();
-  const siteName = publicConfig?.sitename?.trim() || "节点概览";
+  const siteName = publicConfig?.sitename?.trim() || t("home.overviewTitle");
   const themeSettings = useThemeSettings();
   const { mode } = useViewMode();
   const sort = useHomeSort();
@@ -339,8 +345,8 @@ export function NodeGrid() {
     if (!nodeInfoError) return null;
     return (
       <div className="center-box" style={{ minHeight: "40vh" }} aria-live="polite">
-        <span>节点数据暂时无法加载</span>
-        <span style={{ color: "var(--fg-mid)", fontSize: 12 }}>正在等待后端自动重试</span>
+        <span>{t("overview.loadfail.title")}</span>
+        <span style={{ color: "var(--fg-mid)", fontSize: 12 }}>{t("overview.loadfail.sub")}</span>
       </div>
     );
   }
@@ -362,8 +368,8 @@ export function NodeGrid() {
       <>
         {homeHeader}
         <div className="center-box" style={{ minHeight: "40vh" }}>
-          <span>尚未连接到任何节点</span>
-          <span style={{ color: "var(--fg-mid)", fontSize: 12 }}>等待后端推送或前往管理后台添加</span>
+          <span>{t("overview.empty.title")}</span>
+          <span style={{ color: "var(--fg-mid)", fontSize: 12 }}>{t("overview.empty.sub")}</span>
         </div>
       </>
     );

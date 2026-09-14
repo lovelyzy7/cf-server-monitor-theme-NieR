@@ -1,3 +1,4 @@
+import { useLanguage } from "@/hooks/useLanguage";
 import { useEffect, useRef } from "react";
 import { lossHeatColor } from "@/utils/metricTone";
 
@@ -85,6 +86,7 @@ function LossRowCanvas({
   isDark: boolean;
   label: string;
 }) {
+  const { t } = useLanguage();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -139,7 +141,7 @@ function LossRowCanvas({
     <canvas
       ref={canvasRef}
       role="img"
-      aria-label={`${label} 丢包${average == null ? "无数据" : ` 平均 ${average.toFixed(1)}%`}`}
+      aria-label={`${label} 丢包${average == null ? t("ping.noData") : ` 平均 ${average.toFixed(1)}%`}`}
       style={{ width, height: ROW_HEIGHT, display: "block" }}
     />
   );

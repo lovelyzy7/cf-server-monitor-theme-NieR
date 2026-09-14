@@ -1,3 +1,4 @@
+import { useLanguage } from "@/hooks/useLanguage";
 import { Outlet, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -103,29 +104,31 @@ export function AppShell() {
 }
 
 function AccessError({ onRetry }: { onRetry: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="center-box">
       <div>
-        <div className="bracket-header">无法读取站点配置</div>
-        <p style={{ color: "var(--fg-mid)" }}>请检查网络后重试。</p>
+        <div className="bracket-header">{t("shell.accessError")}</div>
+        <p style={{ color: "var(--fg-mid)" }}>{t("shell.accessErrorSub")}</p>
       </div>
       <button type="button" onClick={onRetry}>
-        [ 重试 ]
+        [ {t("common.retry")} ]
       </button>
     </div>
   );
 }
 
 function PrivateSiteGate() {
+  const { t } = useLanguage();
   return (
     <div className="center-box">
       <div className="panel inverse panel-corners" style={{ maxWidth: 420, padding: "24px 32px" }}>
         <div className="bracket-header" style={{ marginTop: 0 }}>
-          访问受限
+          {t("shell.private")}
         </div>
-        <p style={{ margin: "0 0 16px" }}>站点已设为私有，登录后即可查看节点数据。</p>
+        <p style={{ margin: "0 0 16px" }}>{t("shell.privateSub")}</p>
         <a className="button" href={getAdminUrl()}>
-          前往登录
+          {t("shell.gotoLogin")}
         </a>
       </div>
     </div>
