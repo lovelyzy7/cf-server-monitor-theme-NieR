@@ -180,12 +180,12 @@ export function NieRDatePicker({
               ›
             </button>
           </div>
-          <div className="nier-date-week">
+          <div className="nier-date-cal">
             {WEEKDAY_KEYS.map((key) => (
-              <span key={key}>{t(`date.${key}` as "date.mon")}</span>
+              <span key={`week-${key}`} className="nier-date-weekname">
+                {t(`date.${key}` as "date.mon")}
+              </span>
             ))}
-          </div>
-          <div className="nier-date-grid">
             {days.map((ms, index) =>
               ms == null ? (
                 <span key={`empty-${index}`} className="nier-date-day is-empty" />
