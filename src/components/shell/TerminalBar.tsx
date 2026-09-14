@@ -189,19 +189,17 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
     <div className="top-sticky">
       <div className="terminal-bar">
         <div className="left">
-          <img className="terminal-brand-icon" src="./assets/icon.png" alt="" aria-hidden onError={(e) => { e.currentTarget.style.display = "none"; }} />
-          <span>YoRHa</span>
-          <span>Bunker Terminal</span>
-          <span style={{ opacity: 0.85 }}>{siteTitle}</span>
-          {storeStatus.hydrated && total > 0 && (
-            <span className="user-pill terminal-pill-left">
-              NODES {online}/{total}
-            </span>
-          )}
+          <span className="brand-group">
+            <img className="terminal-brand-icon" src="./assets/icon.png" alt="" aria-hidden onError={(e) => { e.currentTarget.style.display = "none"; }} />
+            <span className="brand-yorha">YoRHa</span>
+            <span className="brand-title">Bunker Terminal</span>
+            <span className="brand-site" style={{ opacity: 0.85 }}>{siteTitle}</span>
+          </span>
+          <span className="brand-cloudflare" aria-hidden>{siteTitle.toUpperCase()}</span>
         </div>
         <div className="right">
           {storeStatus.hydrated && total > 0 && (
-            <span className="user-pill terminal-pill-right">
+            <span className="user-pill">
               NODES {online}/{total}
             </span>
           )}
@@ -334,12 +332,12 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
                   setMenuOpen(false);
                 }}
               >
-                <span className="home-sort-item-label">视图 {option.label}</span>
+                <span className="home-sort-item-label">{t("nav.view")} {option.label}</span>
                 {mode === option.value && <span aria-hidden>✓</span>}
               </button>
             ))}
             <button type="button" className="home-sort-item" onClick={openColors}>
-              <span className="home-sort-item-label">配色</span>
+              <span className="home-sort-item-label">{t("nav.colors")}</span>
             </button>
             <Link to="/?view=theme-manage" className="home-sort-item" onClick={() => setMenuOpen(false)}>
               <span className="home-sort-item-label">{t("nav.settings")}</span>

@@ -144,10 +144,10 @@ export function Instance() {
 
       <div className="panel" style={{ marginTop: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <MetricBar label="CPU" percent={metrics?.cpuPct ?? 0} colorVar="--progress-cpu" valueText={metrics ? `${Math.round(metrics.cpuPct)}% · ${meta.cpu_cores || 0} 核` : undefined} />
-          <MetricBar label="内存" percent={metrics?.ramPct ?? 0} colorVar="--progress-memory" valueText={metrics ? `${Math.round(metrics.ramPct)}% · ${formatBytes(metrics.ramUsed)} / ${formatBytes(metrics.ramTotal)}` : undefined} />
-          <MetricBar label="Swap" percent={metrics && metrics.swapTotal > 0 ? (metrics.swapUsed / metrics.swapTotal) * 100 : 0} colorVar="--progress-swap" valueText={metrics ? (metrics.swapTotal > 0 ? `${Math.round((metrics.swapUsed / metrics.swapTotal) * 100)}% · ${formatBytes(metrics.swapUsed)} / ${formatBytes(metrics.swapTotal)}` : "0% · 未配置") : undefined} />
-          <MetricBar label="磁盘" percent={metrics?.diskPct ?? 0} colorVar="--progress-disk" valueText={metrics ? `${Math.round(metrics.diskPct)}% · ${formatBytes(metrics.diskUsed)} / ${formatBytes(metrics.diskTotal)}` : undefined} />
+          <MetricBar label="CPU" percent={metrics?.cpuPct ?? 0} colorVar="--progress-cpu" valueText={metrics ? `${Math.round(metrics.cpuPct)}%` : undefined} />
+          <MetricBar label="内存" percent={metrics?.ramPct ?? 0} colorVar="--progress-memory" valueText={metrics ? `${formatBytes(metrics.ramUsed)} / ${formatBytes(metrics.ramTotal)}` : undefined} />
+          <MetricBar label="Swap" percent={metrics && metrics.swapTotal > 0 ? (metrics.swapUsed / metrics.swapTotal) * 100 : 0} colorVar="--progress-swap" />
+          <MetricBar label="磁盘" percent={metrics?.diskPct ?? 0} colorVar="--progress-disk" valueText={metrics ? `${formatBytes(metrics.diskUsed)} / ${formatBytes(metrics.diskTotal)}` : undefined} />
         </div>
         <dl className="kv" style={{ marginTop: 12 }}>
           <dt>↓ 下行</dt>

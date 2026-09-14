@@ -70,7 +70,7 @@ function CompactGauge({
           {icon}
           <span>{label}</span>
         </span>
-        <strong className="tabular">{value}</strong>
+        <strong className="tabular">{detail ? `${value} · ${detail}` : value}</strong>
       </div>
       <span className="compact-node-gauge-track" aria-hidden />
     </div>

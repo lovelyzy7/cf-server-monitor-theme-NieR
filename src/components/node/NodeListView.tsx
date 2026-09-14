@@ -22,7 +22,7 @@ import { HOMEPAGE_PING_BUCKET_COUNT } from "@/hooks/usePingOverview";
 const GAUGE_SEGMENTS = 14;
 
 /* ---- 可拖拽调整的列宽 ---- */
-const DEFAULT_LIST_COLS = [220, 130, 100, 100, 100, 90, 110, 130, 100, 120];
+const DEFAULT_LIST_COLS = [220, 130, 100, 100, 100, 90, 110, 130, 120, 120];
 const LIST_COLS_STORAGE_KEY = "cfsm-nier:list-cols:v1";
 const MIN_COL_WIDTH = 56;
 /** 列定义：key 对应主题设置 listColumns，lc 对应列宽变量 --lcN。节点列不可隐藏。 */
@@ -34,7 +34,7 @@ const LIST_COLUMNS = [
   { key: "load", label: "负载", className: "col-load", lc: 5, def: 90 },
   { key: "live", label: "实时", className: "col-live", lc: 6, def: 110 },
   { key: "traffic", label: "流量", className: "col-traffic", lc: 7, def: 130 },
-  { key: "net", label: "网络", className: "col-net", lc: 8, def: 100 },
+  { key: "net", label: "网络", className: "col-net", lc: 8, def: 120 },
   { key: "life", label: "运行", className: "col-life", lc: 9, def: 120 },
 ] as const;
 

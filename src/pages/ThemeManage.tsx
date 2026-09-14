@@ -372,7 +372,16 @@ export function ThemeManage() {
           ))}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
-          <button type="button" className="theme-manage-button is-compact" onClick={() => patch("gridColumns", pendingColumns)}>
+          <button
+            type="button"
+            className="theme-manage-button is-compact"
+            onClick={() => {
+              patch("gridColumns", pendingColumns);
+              // 确认即持久化到本机，刷新页面后布局仍生效。
+              const current = getLocalThemeSettings() as Record<string, unknown>;
+              saveLocalThemeSettings({ ...current, gridColumns: pendingColumns } as Parameters<typeof saveLocalThemeSettings>[0]);
+            }}
+          >
             确认
           </button>
           <span style={{ fontSize: 11, color: "var(--fg-mid)" }}>

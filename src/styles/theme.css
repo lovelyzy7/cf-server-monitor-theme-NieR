@@ -3786,3 +3786,75 @@ body .metric-color-swatch input {
   .terminal-bar .right .terminal-btn-lang { order: 3; }
   .terminal-bar .right .terminal-menu { order: 4; }
 }
+
+/* ====================================================================
+ * 38. 本轮：指标单行、MINI 详情、LIST 网络列响应式、移动端两行导航
+ * ==================================================================== */
+
+/* 指标行：标签 | 条 | 值（百分比·配置）同一行，值不换行 */
+.metric-row {
+  grid-template-columns: 96px 1fr auto;
+}
+.metric-row .metric-value {
+  white-space: nowrap;
+}
+
+/* MINI 指标右侧详情小字 */
+.mini-metric-detail {
+  margin-left: 4px;
+  color: var(--fg-mid);
+  font-size: 9px;
+  font-weight: normal;
+}
+
+/* LIST 网络列：窄列只显示数值（大致内容），宽列显示数值 + 延迟柱（详细内容） */
+.col-net {
+  container-type: inline-size;
+}
+.node-list-latency-bars {
+  display: none;
+}
+@container (min-width: 110px) {
+  .node-list-latency-bars {
+    display: block;
+  }
+}
+
+/* 移动端导航两行布局 */
+.brand-cloudflare {
+  display: none;
+}
+@media (max-width: 720px) {
+  .terminal-bar {
+    row-gap: 4px;
+  }
+  /* 第一行：图标 + BUNKER TERMINAL（左）-- CLOUDFLARE SERVER MONITOR（右） */
+  .terminal-bar .left {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  .brand-yorha,
+  .brand-site {
+    display: none;
+  }
+  .brand-cloudflare {
+    display: inline;
+    margin-left: auto;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+  /* 第二行：NODES（左）-- 四键（右） */
+  .terminal-bar .right {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+  .terminal-bar .right .user-pill {
+    order: 1;
+    margin-right: auto;
+  }
+  .terminal-bar .right .terminal-btn-refresh { order: 2; }
+  .terminal-bar .right .terminal-btn-theme { order: 3; }
+  .terminal-bar .right .terminal-btn-lang { order: 4; }
+  .terminal-bar .right .terminal-menu { order: 5; }
+}
