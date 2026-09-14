@@ -373,8 +373,9 @@ export function Traffic() {
     }
     return map;
   }, [summaries]);
-  // 未登录访客查不了超过 24 小时的历史，往期只给登录用户。
-  const maxDayOffset = me?.logged_in ? 13 : 0;
+  // 往期日期：登录站长 13 天（14 天保留）；未登录访客 1 天（后端给 24 小时历史）。
+  // 登录态尚未返回时不提前禁用，避免页面刚打开时日历短暂锁死。
+  const maxDayOffset = me == null ? 13 : me.logged_in ? 13 : 1;
   const todayStartMs = localDayStart(now);
   // 往期记录通过日历选择：解析选中日期，越界（未来/超出上限）时收敛到允许范围。
   const selectedStartMs = selectedDate ? new Date(`${selectedDate}T00:00:00`).getTime() : todayStartMs;
