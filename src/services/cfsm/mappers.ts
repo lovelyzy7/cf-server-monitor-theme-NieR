@@ -1,4 +1,5 @@
 import type { PingLiveSample } from "@/services/pingLiveStore";
+import type { I18nKey } from "@/hooks/useLanguage";
 import {
   CARRIER_KEYS,
   CARRIER_LOSS_KEYS,
@@ -665,4 +666,17 @@ export function inferIntervalSeconds(times: number[]): number | undefined {
   deltas.sort((a, b) => a - b);
   const median = deltas[Math.floor(deltas.length / 2)]!;
   return Math.max(1, Math.round(median / 1000));
+}
+
+
+/** 默认线路名（电信/联通/移动）的显示翻译：真实线路名原样返回。 */
+const CARRIER_FALLBACK_KEYS: Record<string, I18nKey> = {
+  "电信": "carrier.telecom",
+  "联通": "carrier.unicom",
+  "移动": "carrier.mobile",
+};
+
+export function displayCarrierTaskName(name: string, t: (key: I18nKey) => string): string {
+  const key = CARRIER_FALLBACK_KEYS[name];
+  return key ? t(key) : name;
 }

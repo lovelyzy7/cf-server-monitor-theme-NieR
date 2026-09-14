@@ -89,10 +89,9 @@ const PING_TIME_RANGE_OPTIONS: TimeRangeOption[] = [...TIME_RANGE_OPTIONS];
 function formatRangeLabel(hours: number) {
   if (hours % 24 === 0) {
     const days = hours / 24;
-    return `${days} 天`;
+    return `${days} ${translate("chart.days")}`;
   }
-
-  return `${hours} 小时`;
+  return `${hours} ${translate("chart.hours")}`;
 }
 
 function buildHistoryRangeOptions(

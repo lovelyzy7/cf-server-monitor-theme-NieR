@@ -4801,3 +4801,51 @@ body .metric-color-swatch input {
 .nier-date-clear:hover {
   background: var(--bg-cream-dark);
 }
+
+/* ====================================================================
+ * 47. 本轮：移动端占比条防拥挤重叠、小卡数值溢出保护
+ * ==================================================================== */
+
+/* 占比条行：容器/条/数值都不允许内容撑破轨道 */
+.metric-row {
+  min-width: 0;
+}
+.metric-row .metric-bar {
+  min-width: 0;
+}
+.metric-row .metric-value {
+  min-width: 0;
+  max-width: 100%;
+}
+.metric-row .metric-value strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+@media (max-width: 760px) {
+  .metric-row {
+    grid-template-columns: 44px minmax(0, 1fr) 98px;
+    gap: 4px;
+  }
+}
+
+/* 小卡/迷你卡：右侧数值与详情不挤压标签、不重叠 */
+.mini-metric-value {
+  flex: none;
+  max-width: 58%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mini-metric-label {
+  min-width: 44px;
+  flex: none;
+}
+.compact-node-gauge-head strong {
+  min-width: 0;
+  max-width: 58%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

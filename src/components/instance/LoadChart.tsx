@@ -416,10 +416,10 @@ export function LoadChart({ uuid, hours, active = true }: { uuid: string; hours:
   const sourceRecordCount = historyRecords.length;
   const wasDownsampled = !isRealtime && sourceRecordCount > getHistoryRenderLimit(hours);
   const sampleSummary = isRealtime
-    ? `${points.length} 个点`
+    ? t("chart.points").replace("{n}", String(points.length))
     : wasDownsampled
-      ? `${points.length} / ${sourceRecordCount} 个点`
-      : `${points.length} 个点`;
+      ? t("chart.points").replace("{n}", `${points.length} / ${sourceRecordCount}`)
+      : t("chart.points").replace("{n}", String(points.length));
   const coverageSummary = points.length
     ? `${formatChartCoverageTime(points[0].time)} - ${formatChartCoverageTime(points[points.length - 1].time)}`
     : "—";

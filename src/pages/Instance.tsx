@@ -48,7 +48,7 @@ export function Instance() {
   const metrics = useNodeMetrics(uuid ?? "", Boolean(uuid));
   const storeStatus = useNodeStoreStatus(Boolean(uuid));
   useRealtimeFocus(uuid);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [chartType, setChartType] = useState<"load" | "ping">("load");
   const [loadHours, setLoadHours] = useState(0);
   const [pingHours, setPingHours] = useState(DEFAULT_PING_HOURS);
@@ -70,8 +70,10 @@ export function Instance() {
 
   const maxHistoryHours = me?.logged_in ? MAX_HISTORY_HOURS : ANONYMOUS_MAX_HISTORY_HOURS;
 
-  const loadRanges = useMemo(() => buildLoadTimeRangeOptions(maxHistoryHours), [maxHistoryHours]);
-  const pingRanges = useMemo(() => buildPingTimeRangeOptions(maxHistoryHours), [maxHistoryHours]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const loadRanges = useMemo(() => buildLoadTimeRangeOptions(maxHistoryHours), [maxHistoryHours, lang]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const pingRanges = useMemo(() => buildPingTimeRangeOptions(maxHistoryHours), [maxHistoryHours, lang]);
   const showPingChart = themeSettings.isReady && themeSettings.showPingChart;
 
   useEffect(() => {

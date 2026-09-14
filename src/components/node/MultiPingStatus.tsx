@@ -8,6 +8,7 @@ import { latencyHeatColor, lossHeatColor } from "@/utils/metricTone";
 import { HealthBucketTooltip } from "./HealthBucketTooltip";
 import { LatencyBars } from "./LatencyBars";
 import { PingLineSwitcher } from "./PingLineSwitcher";
+import { displayCarrierTaskName } from "@/services/cfsm/mappers";
 import { QualityBars } from "./QualityBars";
 import { formatHealthBucketTooltip } from "./pingBucketText";
 
@@ -47,7 +48,7 @@ const MultiPingMetricRow = memo(function MultiPingMetricRow({
       className="multi-ping-metric-row"
       data-nier-suppress-label
       data-load-state={line.loadState ?? "ready"}
-      aria-label={`${line.taskName} · ${t("ping.latency")} ${latencyLabel} · ${t("ping.loss")} ${lossLabel}${staleError ? ` · ${t("card.homePing.refreshFail")}` : ""}`}
+      aria-label={`${displayCarrierTaskName(line.taskName, t)} · ${t("ping.latency")} ${latencyLabel} · ${t("ping.loss")} ${lossLabel}${staleError ? ` · ${t("card.homePing.refreshFail")}` : ""}`}
     >
       <div className={clsx("multi-ping-metric-head", metric === "loss" && "is-value-only")}>
         {metric === "latency" && <PingLineSwitcher uuid={uuid} slot={slot} taskName={line.taskName} />}

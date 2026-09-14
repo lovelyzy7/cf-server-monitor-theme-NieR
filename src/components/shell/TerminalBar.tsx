@@ -232,7 +232,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           <button
             type="button"
             className="control-button terminal-btn-theme"
-            title={`主题：${APPEARANCE_OPTIONS.find((o) => o.value === appearance)?.label ?? "SYSTEM"}，点击切换`}
+            title={t("shell.themeToggle").replace("{appearance}", APPEARANCE_OPTIONS.find((o) => o.value === appearance)?.label ?? "SYSTEM")}
             onClick={() => setAppearance(APPEARANCE_NEXT[appearance])}
           >
             {APPEARANCE_OPTIONS.find((o) => o.value === appearance)?.label ?? "SYSTEM"}

@@ -3,7 +3,7 @@ import UplotReact from "uplot-react";
 import type uPlot from "uplot";
 import { usePingRecords } from "@/hooks/useRecords";
 import { useCarrierNames } from "@/hooks/usePublicConfig";
-import { carrierTaskName } from "@/services/cfsm/mappers";
+import { carrierTaskName, displayCarrierTaskName } from "@/services/cfsm/mappers";
 import { InstancePanel, InstanceChartLoading } from "./InstancePanel";
 import {
   buildChartTooltipHooks,
@@ -128,17 +128,17 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
   const taskLabels = useMemo(() => {
     const counts = new Map<string, number>();
     for (const task of tasks) {
-      const label = task.name || `任务 #${task.id}`;
+      const label = displayCarrierTaskName(task.name || `${t("chart.task")} #${task.id}`, t);
       counts.set(label, (counts.get(label) ?? 0) + 1);
     }
     return new Map(
       tasks.map((task) => {
-        const baseLabel = task.name || `任务 #${task.id}`;
+        const baseLabel = displayCarrierTaskName(task.name || `${t("chart.task")} #${task.id}`, t);
         const label = (counts.get(baseLabel) ?? 0) > 1 ? `${baseLabel} #${task.id}` : baseLabel;
         return [task.id, label] as const;
       }),
     );
-  }, [tasks]);
+  }, [tasks, t]);
   const taskColors = useMemo(
     () => new Map(tasks.map((task, index) => [task.id, colorForSeries(index, tasks.length)] as const)),
     [tasks],
@@ -229,10 +229,10 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
     if (!chartBundle) return [];
     return visibleTasks.map((task) => ({
       id: task.id,
-      label: taskLabels.get(task.id) ?? `任务 #${task.id}`,
+      label: taskLabels.get(task.id) ?? `${t("chart.task")} #${task.id}`,
       loss: chartBundle.loss[taskIndexById.get(task.id) ?? 0] ?? [],
     }));
-  }, [chartBundle, taskIndexById, taskLabels, visibleTasks]);
+  }, [chartBundle, taskIndexById, taskLabels, visibleTasks, t]);
 
   useEffect(() => {
     if (chartBundle) {
@@ -299,7 +299,7 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
             const raw = chartRef.current[taskIndex + 1]?.[idx] as number | null | undefined;
             const loss = lossRef.current[taskIndex]?.[idx] ?? null;
             return {
-              label: taskLabels.get(task.id) ?? `任务 #${task.id}`,
+              label: taskLabels.get(task.id) ?? `${t("chart.task")} #${task.id}`,
               raw: typeof raw === "number" && Number.isFinite(raw) ? raw : null,
               loss,
               color: taskColors.get(task.id) ?? colorForSeries(taskIndex, tasks.length),
@@ -339,7 +339,7 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
       series: [
         { label: "time" },
         ...tasks.map((task, index) => ({
-          label: taskLabels.get(task.id) ?? `任务 #${task.id}`,
+          label: taskLabels.get(task.id) ?? `${t("chart.task")} #${task.id}`,
           stroke: taskColors.get(task.id) ?? colorForSeries(index, tasks.length),
           width: 1.7,
           spanGaps: connectNulls,
@@ -351,7 +351,7 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
         init: [
           (u) => {
             u.root.setAttribute("role", "img");
-            u.root.setAttribute("aria-label", `Ping 延迟历史图表，共 ${tasks.length} 条线路`);
+            u.root.setAttribute("aria-label", t("chart.pingAria").replace("{n}", String(tasks.length)));
           },
           tooltipHooks.onInit,
         ],
@@ -366,7 +366,7 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
         ],
       },
     };
-  }, [chart, connectNulls, hiddenTasks, hours, isDark, requestedXRange, taskColors, taskIndexById, taskLabels, tasks, visibleTasks, yRange]);
+  }, [chart, connectNulls, hiddenTasks, hours, isDark, requestedXRange, taskColors, taskIndexById, taskLabels, tasks, visibleTasks, yRange, t]);
 
   const options = useMemo<uPlot.Options | null>(
     () => (baseOptions ? { ...baseOptions, width: w, height: h } : null),
@@ -474,7 +474,7 @@ export function PingChart({ uuid, hours, active = true }: { uuid: string; hours:
               onClick={() => toggleTask(task.id)}
               aria-pressed={visible}
               title={[
-                taskLabels.get(task.id) ?? `任务 #${task.id}`,
+                taskLabels.get(task.id) ?? `${t("chart.task")} #${task.id}`,
                 `${t("common.realtime")} ${task.latest != null ? `${task.latest.toFixed(1)} ms` : "—"} | ${t("chart.avg")} ${task.avg != null ? `${task.avg.toFixed(1)} ms` : "—"} | ${t("ping.loss")} ${task.loss.toFixed(1)}%`,
                 `p99 ${task.p99 != null ? `${task.p99.toFixed(0)} ms` : "—"} | ${t("chart.jitter")} ${task.volatility != null ? task.volatility.toFixed(2) : "—"}`,
                 `min ${task.min != null ? `${task.min.toFixed(0)} ms` : "—"} | max ${task.max != null ? `${task.max.toFixed(0)} ms` : "—"} | ${t("chart.sampling")} ${task.total ?? 0} | ${t("chart.interval")} ${task.interval}s`,

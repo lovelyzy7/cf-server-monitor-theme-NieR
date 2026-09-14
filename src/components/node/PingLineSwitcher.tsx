@@ -16,7 +16,7 @@ import {
 import { useCarrierNames } from "@/hooks/usePublicConfig";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { useLanguage } from "@/hooks/useLanguage";
-import { CARRIER_TASKS, carrierTaskName } from "@/services/cfsm/mappers";
+import { CARRIER_TASKS, carrierTaskName, displayCarrierTaskName } from "@/services/cfsm/mappers";
 import { setPingLineOverrides } from "@/services/pingLineOverrideStore";
 import {
   EMPTY_PING_LINE_OVERRIDES,
@@ -51,7 +51,7 @@ export function PingLineSwitcher({ uuid, slot, taskName }: { uuid: string; slot:
         aria-haspopup="true"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        aria-label={`${taskName}，切换这一行的线路`}
+        aria-label={t("card.switchLineFor").replace("{task}", displayCarrierTaskName(taskName, t))}
         title={t("card.switchLine")}
         onClick={() => setOpen((value) => !value)}
         onKeyDown={(event) => {

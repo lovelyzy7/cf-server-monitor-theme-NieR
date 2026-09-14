@@ -1,3 +1,4 @@
+import { translate } from "@/hooks/useLanguage";
 import { useState } from "react";
 import { hostAssetUrl } from "@/services/cfsm/config";
 import { getDisplayRegionCode } from "@/utils/geo";
@@ -29,7 +30,7 @@ export function Flag({ region, size = 14 }: FlagProps) {
 
   const flagCode = getDisplayRegionCode(value);
   const src = hostAssetUrl(`/flags/${flagCode.toLowerCase()}.svg`);
-  const alt = `地区旗帜: ${flagCode}`;
+  const alt = translate("flag.region").replace("{code}", flagCode);
 
   if (failedSrc === src) {
     return (
