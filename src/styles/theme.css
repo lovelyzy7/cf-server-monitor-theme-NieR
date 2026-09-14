@@ -4634,6 +4634,7 @@ body .metric-color-swatch input {
   font-family: var(--font-mono);
   font-size: 12px;
   overflow: hidden;
+  cursor: var(--cur-default);
 }
 .nier-date-panel::before {
   content: "";
@@ -4737,10 +4738,10 @@ body .metric-color-swatch input {
 }
 .nier-date-day:disabled {
   opacity: 0.35;
-  cursor: default;
+  cursor: var(--cur-default);
 }
 .nier-date-day.is-empty {
-  cursor: default;
+  cursor: var(--cur-default);
 }
 
 /* 首页布局按钮与排序按钮最终对齐：固定高度、统一盒模型 */
