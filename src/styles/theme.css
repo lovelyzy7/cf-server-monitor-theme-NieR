@@ -3935,3 +3935,142 @@ body .metric-color-swatch input {
   background: var(--accent);
   box-shadow: 0 0 6px var(--accent);
 }
+
+/* ====================================================================
+ * 40. 本轮：标签定宽对齐、品牌图标放大、火花线撑满、tooltip/跳窗 NieR 化、移动端下拉修复
+ * ==================================================================== */
+
+/* 指标行：标签固定列宽 → 占比条四行严格对齐（中英文标签宽度不同也不再错位） */
+.metric-row {
+  grid-template-columns: 52px 1fr 148px;
+}
+.metric-row .metric-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 760px) {
+  .metric-row {
+    grid-template-columns: 52px 1fr 118px;
+  }
+}
+
+/* 导航栏品牌图标放大：桌面与文字同行居中；移动端绝对定位跨两行 */
+.brand-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.terminal-bar .left {
+  align-items: center;
+}
+.terminal-brand-icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+@media (max-width: 720px) {
+  .terminal-bar {
+    position: relative;
+    padding-left: 52px;
+    min-height: 44px;
+  }
+  .terminal-brand-icon {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* COMPACT 累计流量：火花线撑满上下两行，第二行不再留白 */
+.compact-traffic-total {
+  align-items: stretch;
+}
+.compact-traffic-spark {
+  height: auto;
+  min-height: 30px;
+  align-self: stretch;
+}
+
+/* 悬浮提示框 NieR 化：直角厚边框 + 硬阴影 + 角标 */
+.node-health-hover-tooltip,
+.compact-node-health-tooltip,
+.instance-chart-tooltip {
+  border: var(--border-thick);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+  letter-spacing: 0.05em;
+}
+.node-health-hover-tooltip::before,
+.compact-node-health-tooltip::before,
+.instance-chart-tooltip::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  border-top: var(--border-thick);
+  border-left: var(--border-thick);
+}
+.node-health-hover-tooltip::after,
+.compact-node-health-tooltip::after,
+.instance-chart-tooltip::after {
+  content: "";
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-bottom: var(--border-thick);
+  border-right: var(--border-thick);
+}
+
+/* 所有跳窗统一 NieR 风格：面板底色 + 直角厚边框 + 硬阴影 + 角标 */
+.home-sort-panel,
+.instance-switcher-panel,
+.ping-line-menu,
+.terminal-menu-picker .home-sort-panel,
+.metric-color-popover {
+  background: var(--panel);
+  border: var(--border-thick);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+.home-sort-panel::before,
+.instance-switcher-panel::before,
+.ping-line-menu::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 12px;
+  height: 12px;
+  border-top: var(--border-thick);
+  border-left: var(--border-thick);
+}
+.home-sort-panel::after,
+.instance-switcher-panel::after,
+.ping-line-menu::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  border-bottom: var(--border-thick);
+  border-right: var(--border-thick);
+}
+.terminal-menu-picker .home-sort-panel {
+  padding: 6px 0;
+}
+
+/* 移动端下拉栏按钮恢复显示（本规则晚于第 39 节的桌面隐藏规则，同优先级后者胜） */
+@media (max-width: 720px) {
+  .terminal-bar .terminal-menu {
+    display: inline-flex;
+  }
+}

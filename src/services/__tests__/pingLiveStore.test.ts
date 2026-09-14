@@ -105,8 +105,8 @@ describe("recordPingSample", () => {
   });
 
   it("drops samples that fall out of the retention window", () => {
-    // 保留期比后端 2 小时窗口多留一点余量（见 SAMPLE_TTL_MS），3 小时前的样本一定过期。
-    recordPingSample("node-a", NOW - 3 * 60 * 60_000, ping({ ct: 10 }));
+    // 保留期为 3 小时窗口 + 15 分钟余量（见 SAMPLE_TTL_MS），4 小时前的样本一定过期。
+    recordPingSample("node-a", NOW - 4 * 60 * 60_000, ping({ ct: 10 }));
     recordPingSample("node-a", NOW, ping({ ct: 20 }));
 
     expect(getPingHistorySnapshot("node-a").map((s) => s.ping.ct)).toEqual([20]);
@@ -153,7 +153,7 @@ describe("persistence", () => {
     vi.advanceTimersByTime(20_000);
 
     resetPingLiveStore();
-    vi.setSystemTime(NOW + 3 * 60 * 60_000);
+    vi.setSystemTime(NOW + 4 * 60 * 60_000);
 
     expect(getPingHistorySnapshot("node-a")).toEqual([]);
   });
@@ -402,7 +402,7 @@ describe("seedPingHistory", () => {
 
   it("drops window points that already fell out of the hour", () => {
     seedPingHistory("node-a", [
-      { time: NOW - 3 * 60 * 60_000, ping: ping({ ct: 10 }) },
+      { time: NOW - 4 * 60 * 60_000, ping: ping({ ct: 10 }) },
       { time: NOW, ping: ping({ ct: 20 }) },
     ]);
 
@@ -449,7 +449,7 @@ describe("seedMeasuredHistory", () => {
 
   it("丢掉超过一小时的历史行，不撑爆缓冲区", () => {
     seedMeasuredHistory("node-a", [
-      { time: NOW - 3 * 60 * 60_000, ping: ping({ ct: 10 }) },
+      { time: NOW - 4 * 60 * 60_000, ping: ping({ ct: 10 }) },
       { time: NOW - 10 * 60_000, ping: ping({ ct: 20 }) },
     ]);
 

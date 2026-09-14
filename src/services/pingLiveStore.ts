@@ -68,7 +68,7 @@ const MIN_SAMPLE_GAP_MS = 120_000;
  * 决定（见 usePingOverview 的 `buildPingBuckets`），后端把窗口从 1 小时调到 2 小时、或以后
  * 再调，这个常量只影响「留多久」和「抽稀密度」，不影响一格对一个后端采样点的对应关系。
  */
-export const PING_WINDOW_MS = 2 * 60 * 60 * 1000;
+export const PING_WINDOW_MS = 3 * 60 * 60 * 1000;
 /** 2 小时的图表按柱子数铺满即可；192 条按每 ~37 秒一个留足余量（详情页历史回灌时会密一些）。 */
 const MAX_SAMPLES_PER_NODE = 192;
 /** 抽稀后相邻样本的最小间隔：按窗口跨度铺满上限条数，保证覆盖整段窗口。 */

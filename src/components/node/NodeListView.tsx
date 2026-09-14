@@ -18,7 +18,7 @@ import { HealthBucketTooltip } from "./HealthBucketTooltip";
 import { formatOsLabel, joinTagTitle, nodeDetailLinkLabels } from "./nodeCardShared";
 import { formatHealthBucketTooltip } from "./pingBucketText";
 import type { PingOverviewTaskLoadState } from "@/types/cfsm";
-import { HOMEPAGE_PING_BUCKET_COUNT } from "@/hooks/usePingOverview";
+
 
 const GAUGE_SEGMENTS = 14;
 
@@ -206,9 +206,10 @@ function ListLatency({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  // 列宽越大展示越多采样（更长时间跨度）；默认列宽（120px）即完整 2 小时窗口。
+  // 列宽越大展示越多采样：默认列宽（120px）显示 20 柱（最近 2 小时），
+  // 加宽到 180px 显示全部 30 柱（最多 3 小时）；拖窄只保留近期样本。
   const visibleCount =
-    cellWidth > 0 ? Math.min(buckets.length, Math.max(6, Math.round(cellWidth / 4.2))) : buckets.length;
+    cellWidth > 0 ? Math.min(buckets.length, Math.max(8, Math.round(cellWidth / 6))) : buckets.length;
   const visibleBuckets = visibleCount < buckets.length ? buckets.slice(buckets.length - visibleCount) : buckets;
   const state = resolveListPingState(loadState, hasRealHomepagePingBinding, pingIsAssigned);
   const status = formatListPingStatus(latency, state, t);
@@ -229,12 +230,15 @@ function ListLatency({
   );
 }
 
+/** LIST 网络列最多展示 3 小时的延迟柱（默认列宽约 2 小时）。 */
+const LIST_PING_BUCKET_COUNT = 30;
+
 const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hiddenKeys: ReadonlySet<string> }) {
   const { t } = useLanguage();
   const { resolvedAppearance } = usePreferences();
   const colorsVersion = useMetricColorsVersion();
   const redrawKey = `${resolvedAppearance}:${colorsVersion}`;
-  const model = useNodeCardModel(uuid, { pingBucketCount: HOMEPAGE_PING_BUCKET_COUNT });
+  const model = useNodeCardModel(uuid, { pingBucketCount: LIST_PING_BUCKET_COUNT });
 
   if (!model.node) {
     return <div className="node-list-row" aria-busy style={{ minHeight: 40 }} />;

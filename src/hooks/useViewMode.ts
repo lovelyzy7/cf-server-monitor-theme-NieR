@@ -4,8 +4,8 @@ import { subscribeMediaQuery } from "@/utils/mediaQuery";
 import { isNodeViewMode, type NodeViewMode } from "@/utils/themeSettings";
 
 // Legacy keys retained so session view-mode overrides survive the rename.
-const DESKTOP_OVERRIDE_KEY = "cfsm-nier:node-view-mode-session:desktop";
-const MOBILE_OVERRIDE_KEY = "cfsm-nier:node-view-mode-session:mobile";
+export const DESKTOP_OVERRIDE_KEY = "cfsm-nier:node-view-mode-session:desktop";
+export const MOBILE_OVERRIDE_KEY = "cfsm-nier:node-view-mode-session:mobile";
 export const MOBILE_VIEW_MODE_QUERY = "(max-width: 720px)";
 // 快捷切换按钮的循环顺序：大卡 → 小卡 → 迷你 → 列表 → 大卡……
 const VIEW_MODE_CYCLE: readonly NodeViewMode[] = ["large", "compact", "mini", "list"];
@@ -65,6 +65,14 @@ function clearOverride(key: string) {
   } catch {
     // session storage 不可用时没什么可清的。
   }
+}
+
+/** 清掉顶栏快捷切换留下的 session override，让主题里的新默认值立即生效。 */
+export function clearViewModeOverride(device: ViewModeDevice) {
+  const key = device === "mobile" ? MOBILE_OVERRIDE_KEY : DESKTOP_OVERRIDE_KEY;
+  clearOverride(key);
+  refreshSnapshot();
+  emit();
 }
 
 function getMediaQuery() {

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { clsx } from "clsx";
 import { useCarrierNames, usePublicConfig } from "@/hooks/usePublicConfig";
 import { useLocalThemeSettings } from "@/hooks/useThemeSettings";
+import { clearViewModeOverride } from "@/hooks/useViewMode";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useLanguage } from "@/hooks/useLanguage";
 import { getNodes, saveThemeOptions } from "@/services/api";
@@ -123,6 +124,17 @@ export function ThemeManage() {
   const patch = useCallback(<K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((prev) => (Object.is(prev[key], value) ? prev : { ...prev, [key]: value }));
   }, []);
+
+  /** 卡片视图：切换即持久化到本机并清掉会话 override，首页立即生效。 */
+  const applyNodeViewMode = useCallback(
+    (key: "desktopNodeViewMode" | "mobileNodeViewMode", value: Draft[typeof key]) => {
+      patch(key, value);
+      const current = getLocalThemeSettings() as Record<string, unknown>;
+      saveLocalThemeSettings({ ...current, [key]: value } as Parameters<typeof saveLocalThemeSettings>[0]);
+      clearViewModeOverride(key === "desktopNodeViewMode" ? "desktop" : "mobile");
+    },
+    [patch],
+  );
 
   useEffect(() => {
     if (isDirty) setMessage(null);
@@ -310,7 +322,7 @@ export function ThemeManage() {
             <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("view.desktop")}</span>
             <div className="tab-bar">
               {VIEW_MODE_OPTIONS.map((option) => (
-                <button key={option.value} type="button" className={clsx("tab-btn", draft.desktopNodeViewMode === option.value && "active")} onClick={() => patch("desktopNodeViewMode", option.value)}>
+                <button key={option.value} type="button" className={clsx("tab-btn", draft.desktopNodeViewMode === option.value && "active")} onClick={() => applyNodeViewMode("desktopNodeViewMode", option.value)}>
                   {option.label}
                 </button>
               ))}
@@ -320,7 +332,7 @@ export function ThemeManage() {
             <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("view.mobile")}</span>
             <div className="tab-bar">
               {VIEW_MODE_OPTIONS.filter((o) => o.value !== "list").map((option) => (
-                <button key={option.value} type="button" className={clsx("tab-btn", draft.mobileNodeViewMode === option.value && "active")} onClick={() => patch("mobileNodeViewMode", option.value)}>
+                <button key={option.value} type="button" className={clsx("tab-btn", draft.mobileNodeViewMode === option.value && "active")} onClick={() => applyNodeViewMode("mobileNodeViewMode", option.value)}>
                   {option.label}
                 </button>
               ))}
