@@ -33,6 +33,7 @@ import { CompactNodeCard } from "./CompactNodeCard";
 import { MiniNodeCard } from "./MiniNodeCard";
 import { NodeCardUuid } from "./NodeCard";
 import { NodeListView } from "./NodeListView";
+import { useListNodeOrder } from "@/services/listNodeOrderStore";
 import type { NodeViewMode } from "@/utils/themeSettings";
 
 const GRID_MIN_WIDTH: Record<NodeViewMode, number> = {
@@ -309,8 +310,26 @@ export function NodeGrid() {
     }
   }, [themeSettings.showGroupTabs, selectedGroup]);
 
+  const manualListOrder = useListNodeOrder();
+  // LIST 视图：默认排序（后端 weight）时应用手动拖动顺序；其它排序字段仍按字段排。
+  const manualOrderActive = mode === "list" && sortField === "default";
   const uuidsKey = useMemo(() => orderedNodes.map((node) => node.uuid).join(UUID_KEY_SEPARATOR), [orderedNodes]);
-  const orderedUuids = useMemo(() => (uuidsKey ? uuidsKey.split(UUID_KEY_SEPARATOR) : []), [uuidsKey]);
+  const orderedUuids = useMemo(() => {
+    const base = uuidsKey ? uuidsKey.split(UUID_KEY_SEPARATOR) : [];
+    if (!manualOrderActive || manualListOrder.length === 0) return base;
+    const rest = new Set(base);
+    const result: string[] = [];
+    for (const uuid of manualListOrder) {
+      if (rest.has(uuid)) {
+        result.push(uuid);
+        rest.delete(uuid);
+      }
+    }
+    for (const uuid of base) {
+      if (rest.has(uuid)) result.push(uuid);
+    }
+    return result;
+  }, [uuidsKey, manualOrderActive, manualListOrder]);
   const cards = useMemo(
     () =>
       mode === "list"
@@ -385,7 +404,7 @@ export function NodeGrid() {
         </div>
       )}
       {showRegionBar && <RegionTabs regions={regionOptions} selectedRegion={selectedRegion} onSelectRegion={setSelectedRegion} />}
-      {isList ? <NodeListView uuids={orderedUuids} /> : gridElement}
+      {isList ? <NodeListView uuids={orderedUuids} dragReorderEnabled={manualOrderActive} /> : gridElement}
     </>
   );
 }

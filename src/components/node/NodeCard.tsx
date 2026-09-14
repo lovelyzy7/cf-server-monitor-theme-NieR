@@ -9,9 +9,11 @@ import { MetricBar } from "./MetricBar";
 import { LatencyBars } from "./LatencyBars";
 import { QualityBars } from "./QualityBars";
 import { MultiPingStatus } from "./MultiPingStatus";
+import { useNieRHoverLabel } from "@/components/ui/NieRHoverLabel";
 import { formatHealthBucketTooltip } from "./pingBucketText";
 import { formatBytes, formatByteRateLabel, trimFixed } from "@/utils/format";
 import { formatBillingCycle } from "@/utils/billing";
+import { nodeDetailLinkLabels } from "./nodeCardShared";
 import type { NodeInfo } from "@/types/cfsm";
 
 function StatusPill({ online }: { online: boolean | null }) {
@@ -38,6 +40,7 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
   const [hoverLatency, setHoverLatency] = useState<number | null>(null);
   const [hoverLoss, setHoverLoss] = useState<number | null>(null);
   const { t } = useLanguage();
+  const hoverLabel = useNieRHoverLabel();
 
   if (!model.node) {
     return (
@@ -56,9 +59,19 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
   const merged = m.node;
   const online = merged.online === true ? true : merged.online === false ? false : null;
   const uptime = m.uptime;
+  const detailLabels = nodeDetailLinkLabels(node.name, m.osName, t);
 
   return (
-    <Link to={`/server/${encodeURIComponent(node.uuid)}`} className="node-card" style={{ display: "block" }}>
+    <Link
+      to={`/server/${encodeURIComponent(node.uuid)}`}
+      className="node-card"
+      style={{ display: "block" }}
+      aria-label={detailLabels.ariaLabel}
+      onPointerEnter={(event) => hoverLabel.show(event, detailLabels.title)}
+      onPointerMove={hoverLabel.move}
+      onPointerLeave={hoverLabel.hide}
+    >
+      {hoverLabel.node}
       <div className="node-card-head">
         <span className="node-card-name">
           <Flag region={node.region} size={14} />
@@ -78,13 +91,17 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         <MetricBar label="CPU" percent={merged?.cpuPct ?? 0} colorVar="--progress-cpu"
-          valueText={merged ? `${Math.round(merged.cpuPct)}% · ${merged.cpu_cores || 0} 核` : undefined} />
+          valueText={merged ? `${Math.round(merged.cpuPct)}%` : undefined}
+          detailText={merged ? `${merged.cpu_cores || 0} ${t("common.cores")}` : undefined} />
         <MetricBar label="MEM" percent={merged?.ramPct ?? 0} colorVar="--progress-memory"
-          valueText={merged ? `${Math.round(merged.ramPct)}% · ${formatBytes(merged.ramUsed)} / ${formatBytes(merged.ramTotal)}` : undefined} />
+          valueText={merged ? `${Math.round(merged.ramPct)}%` : undefined}
+          detailText={merged ? `${formatBytes(merged.ramUsed)} / ${formatBytes(merged.ramTotal)}` : undefined} />
         <MetricBar label="SWAP" percent={merged && merged.swapTotal > 0 ? (merged.swapUsed / merged.swapTotal) * 100 : 0} colorVar="--progress-swap"
-          valueText={merged ? (merged.swapTotal > 0 ? `${Math.round((merged.swapUsed / merged.swapTotal) * 100)}% · ${formatBytes(merged.swapUsed)} / ${formatBytes(merged.swapTotal)}` : `0% · ${t("common.unconfigured")}`) : undefined} />
+          valueText={merged ? `${Math.round((merged.swapUsed / merged.swapTotal) * 100)}%` : undefined}
+          detailText={merged ? (merged.swapTotal > 0 ? `${formatBytes(merged.swapUsed)} / ${formatBytes(merged.swapTotal)}` : t("common.unconfigured")) : undefined} />
         <MetricBar label="DISK" percent={merged?.diskPct ?? 0} colorVar="--progress-disk"
-          valueText={merged ? `${Math.round(merged.diskPct)}% · ${formatBytes(merged.diskUsed)} / ${formatBytes(merged.diskTotal)}` : undefined} />
+          valueText={merged ? `${Math.round(merged.diskPct)}%` : undefined}
+          detailText={merged ? `${formatBytes(merged.diskUsed)} / ${formatBytes(merged.diskTotal)}` : undefined} />
       </div>
 
       {m.shouldRenderPingBars && (

@@ -1,5 +1,5 @@
 import { translate, useLanguage } from "@/hooks/useLanguage";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 import { usePreferences } from "@/hooks/usePreferences";
 import {
@@ -40,6 +40,41 @@ const PRESET_COLORS = [
 
 const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
+function hexToHsv(hex: string): { h: number; s: number; v: number } {
+  const value = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim())?.[1] ?? "2c2922";
+  const r = parseInt(value.slice(0, 2), 16) / 255;
+  const g = parseInt(value.slice(2, 4), 16) / 255;
+  const b = parseInt(value.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  let h = 0;
+  if (delta > 0) {
+    if (max === r) h = 60 * (((g - b) / delta) % 6);
+    else if (max === g) h = 60 * ((b - r) / delta + 2);
+    else h = 60 * ((r - g) / delta + 4);
+  }
+  if (h < 0) h += 360;
+  return { h, s: max === 0 ? 0 : delta / max, v: max };
+}
+
+function hsvToHex(h: number, s: number, v: number): string {
+  const c = v * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = v - c;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (h < 60) [r, g, b] = [c, x, 0];
+  else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  const to = (n: number) => Math.round((n + m) * 255).toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
 export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
   const { t } = useLanguage();
   const {
@@ -77,13 +112,58 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
     }
     setActiveKey(key);
     setHexDraft(valueOf(key));
+    setHsv(hexToHsv(valueOf(key)));
   };
-  const commitHex = (key: MetricColorKey, value: string) => {
+  const commitHex = useCallback((key: MetricColorKey, value: string) => {
     setHexDraft(value);
     if (HEX_PATTERN.test(value.trim())) {
       setColor(key, value.trim().toLowerCase());
     }
-  };
+  }, [setColor]);
+
+  // 自定义拖动取色：饱和度/明度方块 + 色相条。
+  const [hsv, setHsv] = useState(() => hexToHsv("#2c2922"));
+  const [dragTarget, setDragTarget] = useState<"sv" | "hue" | null>(null);
+  const svRef = useRef<HTMLDivElement | null>(null);
+  const hueRef = useRef<HTMLDivElement | null>(null);
+
+  const pickFromSv = useCallback((key: MetricColorKey, event: { clientX: number; clientY: number }) => {
+    const rect = svRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0 || rect.height <= 0) return;
+    const s = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const v = 1 - Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+    setHsv((prev) => {
+      const next = { ...prev, s, v };
+      commitHex(key, hsvToHex(next.h, next.s, next.v));
+      return next;
+    });
+  }, [commitHex]);
+
+  const pickFromHue = useCallback((key: MetricColorKey, event: { clientX: number }) => {
+    const rect = hueRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0) return;
+    const h = Math.max(0, Math.min(360, ((event.clientX - rect.left) / rect.width) * 360));
+    setHsv((prev) => {
+      const next = { ...prev, h };
+      commitHex(key, hsvToHex(next.h, next.s, next.v));
+      return next;
+    });
+  }, [commitHex]);
+
+  useEffect(() => {
+    if (!dragTarget || !activeKey) return;
+    const onMove = (event: PointerEvent) => {
+      if (dragTarget === "sv") pickFromSv(activeKey, event);
+      else pickFromHue(activeKey, event);
+    };
+    const onUp = () => setDragTarget(null);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [dragTarget, activeKey, pickFromSv, pickFromHue]);
 
   return (
     <div className="metric-color-picker" role="group" aria-label={t("shell.colors")} hidden={hidden}>
@@ -189,6 +269,36 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
                   </button>
                   {open && (
                     <div className="metric-color-popover" role="group" aria-label={t("colors.pickFor").replace("{label}", label)}>
+                      <div className="metric-color-drag" aria-label={t("colors.dragPick")}>
+                        <div
+                          ref={svRef}
+                          className="metric-color-sv"
+                          style={{
+                            background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hsv.h}, 100%, 50%))`,
+                          }}
+                          onPointerDown={(event) => {
+                            event.currentTarget.setPointerCapture(event.pointerId);
+                            setDragTarget("sv");
+                            pickFromSv(key, event);
+                          }}
+                        >
+                          <span
+                            className="metric-color-sv-thumb"
+                            style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, background: hsvToHex(hsv.h, hsv.s, hsv.v) }}
+                          />
+                        </div>
+                        <div
+                          ref={hueRef}
+                          className="metric-color-hue"
+                          onPointerDown={(event) => {
+                            event.currentTarget.setPointerCapture(event.pointerId);
+                            setDragTarget("hue");
+                            pickFromHue(key, event);
+                          }}
+                        >
+                          <span className="metric-color-hue-thumb" style={{ left: `${hsv.h / 3.6}%`, background: `hsl(${hsv.h}, 100%, 50%)` }} />
+                        </div>
+                      </div>
                       <div className="metric-color-presets">
                         {PRESET_COLORS.map((preset) => (
                           <button
@@ -202,6 +312,7 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
                             onClick={() => {
                               setColor(key, preset);
                               setHexDraft(preset);
+                              setHsv(hexToHsv(preset));
                             }}
                           />
                         ))}

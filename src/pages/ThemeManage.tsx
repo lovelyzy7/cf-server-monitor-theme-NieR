@@ -38,7 +38,7 @@ const VIEW_MODE_OPTIONS = [
 /** 表格（LIST 视图）可开关的列；节点列始终显示。 */
 const LIST_COLUMN_OPTIONS = [
   { key: "os", label: "list.os" },
-  { key: "cpu", label: "CPU" },
+  { key: "cpu", label: "detail.cpu" },
   { key: "mem", label: "list.mem" },
   { key: "disk", label: "list.disk" },
   { key: "load", label: "list.load" },
@@ -125,13 +125,19 @@ export function ThemeManage() {
     setDraft((prev) => (Object.is(prev[key], value) ? prev : { ...prev, [key]: value }));
   }, []);
 
-  /** 卡片视图：切换即持久化到本机并清掉会话 override，首页立即生效。 */
+  /** 卡片视图（桌面/移动端合并）：切换即持久化到本机并清掉会话 override，首页立即生效。 */
   const applyNodeViewMode = useCallback(
-    (key: "desktopNodeViewMode" | "mobileNodeViewMode", value: Draft[typeof key]) => {
-      patch(key, value);
+    (value: Draft["desktopNodeViewMode"]) => {
+      patch("desktopNodeViewMode", value);
+      patch("mobileNodeViewMode", value);
       const current = getLocalThemeSettings() as Record<string, unknown>;
-      saveLocalThemeSettings({ ...current, [key]: value } as Parameters<typeof saveLocalThemeSettings>[0]);
-      clearViewModeOverride(key === "desktopNodeViewMode" ? "desktop" : "mobile");
+      saveLocalThemeSettings({
+        ...current,
+        desktopNodeViewMode: value,
+        mobileNodeViewMode: value,
+      } as Parameters<typeof saveLocalThemeSettings>[0]);
+      clearViewModeOverride("desktop");
+      clearViewModeOverride("mobile");
     },
     [patch],
   );
@@ -306,7 +312,7 @@ export function ThemeManage() {
               aria-pressed={draft.defaultAppearance === option.value}
               onClick={() => patch("defaultAppearance", option.value)}
             >
-              {option.label}
+              {t(option.label)}
             </button>
           ))}
         </div>
@@ -317,28 +323,15 @@ export function ThemeManage() {
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
         <h2 className="bracket-header" style={{ fontSize: 14 }}>{t("settings.cardView")}</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
-          <div>
-            <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("view.desktop")}</span>
-            <div className="tab-bar">
-              {VIEW_MODE_OPTIONS.map((option) => (
-                <button key={option.value} type="button" className={clsx("tab-btn", draft.desktopNodeViewMode === option.value && "active")} onClick={() => applyNodeViewMode("desktopNodeViewMode", option.value)}>
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>{t("view.mobile")}</span>
-            <div className="tab-bar">
-              {VIEW_MODE_OPTIONS.filter((o) => o.value !== "list").map((option) => (
-                <button key={option.value} type="button" className={clsx("tab-btn", draft.mobileNodeViewMode === option.value && "active")} onClick={() => applyNodeViewMode("mobileNodeViewMode", option.value)}>
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* 桌面端与移动端合并为一组：四个选项对称分布；移动端选到 LIST 时自动回退小卡片。 */}
+        <div className="tab-bar">
+          {VIEW_MODE_OPTIONS.map((option) => (
+            <button key={option.value} type="button" className={clsx("tab-btn", draft.desktopNodeViewMode === option.value && "active")} onClick={() => applyNodeViewMode(option.value)}>
+              {t(option.label)}
+            </button>
+          ))}
         </div>
+        <p style={{ fontSize: 11, color: "var(--fg-mid)", marginTop: 8 }}>{t("settings.cardViewHint")}</p>
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
@@ -410,19 +403,22 @@ export function ThemeManage() {
         {orderedGroups.length === 0 ? (
           <p style={{ fontSize: 12, color: "var(--fg-mid)", margin: 0 }}>{t("settings.noGroups")}</p>
         ) : (
-          <div className="group-order-list">
-            {orderedGroups.map((group) => (
+          <div className="group-order-list" role="list">
+            {orderedGroups.map((group, index) => (
               <div
                 key={group}
+                role="listitem"
                 className="group-order-item"
                 draggable
+                data-dragging={dragGroup === group ? "true" : undefined}
                 onDragStart={() => setDragGroup(group)}
                 onDragEnd={() => setDragGroup(null)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => dropGroupOn(group)}
               >
-                <span className="group-order-handle" aria-hidden>≡</span>
-                <span>{group}</span>
+                <span className="group-order-handle" aria-hidden>⠿</span>
+                <span className="group-order-index tabular">{String(index + 1).padStart(2, "0")}</span>
+                <span className="group-order-name">{group}</span>
               </div>
             ))}
           </div>
@@ -441,7 +437,7 @@ export function ThemeManage() {
         {LIST_COLUMN_OPTIONS.map((column) => (
           <ToggleRow
             key={column.key}
-            label={column.label}
+            label={t(column.label)}
             checked={draft.listColumns[column.key] !== false}
             onPatch={(v) => patch("listColumns", { ...draft.listColumns, [column.key]: v })}
           />

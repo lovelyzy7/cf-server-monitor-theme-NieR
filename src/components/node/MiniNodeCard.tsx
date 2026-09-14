@@ -7,6 +7,7 @@ import { IpStackBadges } from "./IpStackBadges";
 import { HealthBucketTooltip } from "./HealthBucketTooltip";
 import { resolveTouchBucketIndex, TOUCH_BUCKET_HOLD_MS } from "./touchBucketPick";
 import { useNodeCardModel } from "@/hooks/useNodeCardModel";
+import { useNieRHoverLabel } from "@/components/ui/NieRHoverLabel";
 import { useLanguage } from "@/hooks/useLanguage";
 import { HOMEPAGE_PING_BUCKET_COUNT } from "@/hooks/usePingOverview";
 import { speedRateColor } from "@/utils/metricTone";
@@ -31,10 +32,10 @@ function MiniHeader({ node, osName }: { node: MiniNode; osName: string }) {
   return (
     <header className="mini-node-header">
       <Flag region={node.region} size={14} />
-      <Link to={detailHref} className="mini-node-title" title={node.name}>
+      <Link to={detailHref} className="mini-node-title">
         {node.name}
       </Link>
-      <Link to={detailHref} className="mini-node-os" title={detailLabels.title} aria-label={detailLabels.ariaLabel}>
+      <Link to={detailHref} className="mini-node-os" aria-label={detailLabels.ariaLabel}>
         <OsLogo value={node.os} size={14} />
       </Link>
     </header>
@@ -297,6 +298,7 @@ const MiniHealth = memo(function MiniHealth({
 
 export const MiniNodeCard = memo(function MiniNodeCard({ uuid }: { uuid: string }) {
   const { t } = useLanguage();
+  const hoverLabel = useNieRHoverLabel();
   const model = useNodeCardModel(uuid, { pingBucketCount: HOMEPAGE_PING_BUCKET_COUNT });
 
   if (!model.node) {
@@ -319,9 +321,16 @@ export const MiniNodeCard = memo(function MiniNodeCard({ uuid }: { uuid: string 
     isOffline,
     osName,
   } = model;
+  const detailLabels = nodeDetailLinkLabels(node.name, osName, t);
 
   return (
-    <article className={clsx("mini-node-card", isOffline && "is-offline")}>
+    <article
+      className={clsx("mini-node-card", isOffline && "is-offline")}
+      onPointerEnter={(event) => hoverLabel.show(event, detailLabels.title)}
+      onPointerMove={hoverLabel.move}
+      onPointerLeave={hoverLabel.hide}
+    >
+      {hoverLabel.node}
       <MiniHeader node={node} osName={osName} />
       <MiniChips tags={footerTags} ipv4={node.ipv4} ipv6={node.ipv6} />
       <MiniVitals node={node} loadFraction={loadFraction} />
@@ -339,7 +348,6 @@ export const MiniNodeCard = memo(function MiniNodeCard({ uuid }: { uuid: string 
         to={`/server/${encodeURIComponent(uuid)}`}
         className="card-stretched-link"
         aria-label={nodeDetailLinkLabels(node.name, osName, t).ariaLabel}
-        title={nodeDetailLinkLabels(node.name, osName, t).title}
       />
     </article>
   );

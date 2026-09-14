@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "react-router-dom";
 import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
@@ -9,6 +9,10 @@ import { useThemeSettings } from "@/hooks/useThemeSettings";
 import { usePreferences } from "@/hooks/usePreferences";
 import { getLocalThemeSettings, saveLocalThemeSettings } from "@/services/themeSettingsStore";
 import { useMetricColorsVersion } from "@/hooks/useMetricColors";
+import { buildPingBuckets } from "@/hooks/usePingOverview";
+import { setListNodeOrder } from "@/services/listNodeOrderStore";
+import { useNieRHoverLabel } from "@/components/ui/NieRHoverLabel";
+import type { PingOverviewItem } from "@/types/cfsm";
 import { formatBytes } from "@/utils/format";
 import { speedRateColor } from "@/utils/metricTone";
 import { CanvasStrip } from "./CanvasStrip";
@@ -181,7 +185,7 @@ function ListLatency({
   hasRealHomepagePingBinding,
   pingIsAssigned,
   latencyColor,
-  buckets,
+  pingItem,
   redrawKey,
 }: {
   latency: number | null;
@@ -189,7 +193,7 @@ function ListLatency({
   hasRealHomepagePingBinding: boolean;
   pingIsAssigned: boolean;
   latencyColor: string;
-  buckets: Parameters<typeof LatencyBars>[0]["buckets"];
+  pingItem: PingOverviewItem;
   redrawKey: string;
 }) {
   const { t } = useLanguage();
@@ -206,14 +210,18 @@ function ListLatency({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  // 列宽越大展示越多采样：默认列宽（120px）显示 20 柱（最近 2 小时），
-  // 加宽到 180px 显示全部 30 柱（最多 3 小时）；拖窄只保留近期样本。
-  const visibleCount =
-    cellWidth > 0 ? Math.min(buckets.length, Math.max(8, Math.round(cellWidth / 6))) : buckets.length;
-  const visibleBuckets = visibleCount < buckets.length ? buckets.slice(buckets.length - visibleCount) : buckets;
+  // 列宽越大展示越多采样：默认列宽（120px）显示 20 柱 = 最近 2 小时；
+  // 加宽到 180px 显示 30 柱 = 最多 3 小时；拖窄只保留近期样本。
+  // 每柱固定 6 分钟，按列宽重建桶（窗口随柱数一起变，保证时间跨度真实变化）。
+  const bucketCount =
+    cellWidth > 0 ? Math.max(10, Math.min(LIST_PING_MAX_BUCKETS, Math.round(cellWidth / 6))) : LIST_PING_DEFAULT_BUCKETS;
+  const buckets = useMemo(
+    () => buildPingBuckets(pingItem, bucketCount, Date.now(), undefined, bucketCount * 6 * 60_000),
+    [pingItem, bucketCount],
+  );
   const state = resolveListPingState(loadState, hasRealHomepagePingBinding, pingIsAssigned);
   const status = formatListPingStatus(latency, state, t);
-  const hoveredBucket = hoveredIndex == null ? null : (visibleBuckets[hoveredIndex] ?? null);
+  const hoveredBucket = hoveredIndex == null ? null : (buckets[hoveredIndex] ?? null);
   const tooltip = hoveredBucket ? formatHealthBucketTooltip(hoveredBucket, "latency", t) : null;
 
   return (
@@ -223,22 +231,42 @@ function ListLatency({
         {latency != null && <small>ms</small>}
       </span>
       <span className="node-list-latency-bars">
-        <LatencyBars buckets={visibleBuckets} redrawKey={redrawKey} height={14} onHoverIndex={setHoveredIndex} />
-        <HealthBucketTooltip text={tooltip} index={hoveredIndex} count={visibleBuckets.length} />
+        <LatencyBars buckets={buckets} redrawKey={`${redrawKey}:${bucketCount}`} height={14} onHoverIndex={setHoveredIndex} />
+        <HealthBucketTooltip text={tooltip} index={hoveredIndex} count={buckets.length} />
       </span>
     </div>
   );
 }
 
-/** LIST 网络列最多展示 3 小时的延迟柱（默认列宽约 2 小时）。 */
-const LIST_PING_BUCKET_COUNT = 30;
+/** LIST 网络列：默认列宽 20 柱（2 小时），加宽最多 30 柱（3 小时）。 */
+const LIST_PING_DEFAULT_BUCKETS = 20;
+const LIST_PING_MAX_BUCKETS = 30;
 
-const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hiddenKeys: ReadonlySet<string> }) {
+const NodeRow = memo(function NodeRow({
+  uuid,
+  hiddenKeys,
+  dragReorderEnabled,
+  dragUuid,
+  onDragStartRow,
+  onDragEndRow,
+  onDragOverRow,
+  onDropRow,
+}: {
+  uuid: string;
+  hiddenKeys: ReadonlySet<string>;
+  dragReorderEnabled: boolean;
+  dragUuid: string | null;
+  onDragStartRow: (uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => void;
+  onDragEndRow: () => void;
+  onDragOverRow: (uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => void;
+  onDropRow: (uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => void;
+}) {
   const { t } = useLanguage();
+  const hoverLabel = useNieRHoverLabel();
   const { resolvedAppearance } = usePreferences();
   const colorsVersion = useMetricColorsVersion();
   const redrawKey = `${resolvedAppearance}:${colorsVersion}`;
-  const model = useNodeCardModel(uuid, { pingBucketCount: LIST_PING_BUCKET_COUNT });
+  const model = useNodeCardModel(uuid);
 
   if (!model.node) {
     return <div className="node-list-row" aria-busy style={{ minHeight: 40 }} />;
@@ -248,7 +276,6 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
     node,
     traffic,
     ping,
-    pingBuckets,
     footerTags,
     uptime,
     renewalPrice,
@@ -283,15 +310,26 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
   return (
     <Link
       to={`/server/${encodeURIComponent(uuid)}`}
-      className={clsx("node-list-row", isOffline && "is-offline")}
-      title={detailLabels.title}
+      className={clsx("node-list-row", isOffline && "is-offline", dragReorderEnabled && "is-reorderable")}
       aria-label={rowLabel}
+      draggable={dragReorderEnabled}
+      data-dragging={dragUuid === uuid ? "true" : undefined}
+      data-drop-target={dragUuid != null && dragUuid !== uuid ? "true" : undefined}
+      onDragStart={(event) => onDragStartRow(uuid, event)}
+      onDragEnd={onDragEndRow}
+      onDragOver={(event) => onDragOverRow(uuid, event)}
+      onDrop={(event) => onDropRow(uuid, event)}
+      onPointerEnter={(event) => hoverLabel.show(event, detailLabels.title)}
+      onPointerMove={hoverLabel.move}
+      onPointerLeave={hoverLabel.hide}
     >
+      {hoverLabel.node}
       <div className="node-list-node">
+        {dragReorderEnabled && <span className="node-list-drag-handle" aria-hidden>⠿</span>}
         <div className="node-list-node-text">
           <div className="node-list-node-head">
             <Flag region={node.region} size={14} />
-            <span className="node-list-name" title={node.name}>
+            <span className="node-list-name">
               {node.name}
             </span>
           </div>
@@ -371,7 +409,7 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
             hasRealHomepagePingBinding={hasRealHomepagePingBinding}
             pingIsAssigned={ping.isAssigned}
             latencyColor={latencyColor}
-            buckets={pingBuckets}
+            pingItem={ping}
             redrawKey={redrawKey}
           />
         </div>
@@ -386,9 +424,46 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
   );
 });
 
-export function NodeListView({ uuids }: { uuids: string[] }) {
+export function NodeListView({ uuids, dragReorderEnabled }: { uuids: string[]; dragReorderEnabled: boolean }) {
   const { t } = useLanguage();
   const themeSettings = useThemeSettings();
+  const [dragUuid, setDragUuid] = useState<string | null>(null);
+
+  const handleDragStart = useCallback((uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => {
+    // 只允许从首列（节点名）发起拖动，行内其它区域保持正常点选。
+    if (!(event.target as HTMLElement).closest(".node-list-node")) {
+      event.preventDefault();
+      return;
+    }
+    event.dataTransfer.effectAllowed = "move";
+    setDragUuid(uuid);
+  }, []);
+
+  const handleDragEnd = useCallback(() => setDragUuid(null), []);
+
+  const handleDragOver = useCallback((uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => {
+    if (dragUuid != null && dragUuid !== uuid) event.preventDefault();
+  }, [dragUuid]);
+
+  const handleDrop = useCallback((targetUuid: string, event: ReactDragEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const current = dragUuid;
+    if (!current || current === targetUuid) {
+      setDragUuid(null);
+      return;
+    }
+    const next = [...uuids];
+    const fromIndex = next.indexOf(current);
+    const toIndex = next.indexOf(targetUuid);
+    if (fromIndex < 0 || toIndex < 0) {
+      setDragUuid(null);
+      return;
+    }
+    next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, current);
+    setListNodeOrder(next);
+    setDragUuid(null);
+  }, [dragUuid, uuids]);
   const [cols, setCols] = useState<number[]>(readListCols);
   const colsRef = useRef(cols);
   colsRef.current = cols;
@@ -470,7 +545,12 @@ export function NodeListView({ uuids }: { uuids: string[] }) {
       <div className="node-list-scroll">
         <div className="node-list" style={colVars}>
         <div className="node-list-row node-list-head" aria-hidden>
-          <div className="node-list-cell node-list-head-cell">{t("list.node")}</div>
+          <div className="node-list-cell node-list-head-cell">
+            {t("list.node")}
+            {dragReorderEnabled && (
+              <span className="node-list-drag-handle" aria-hidden title={t("list.dragRowsHint")}>⠿</span>
+            )}
+          </div>
           {visibleColumns.map((column) => (
             <div key={column.key} className={`node-list-cell node-list-head-cell ${column.className}`}>
               {t(column.i18n)}
@@ -488,7 +568,17 @@ export function NodeListView({ uuids }: { uuids: string[] }) {
           ))}
         </div>
         {uuids.map((uuid) => (
-          <NodeRow key={uuid} uuid={uuid} hiddenKeys={hiddenKeys} />
+          <NodeRow
+            key={uuid}
+            uuid={uuid}
+            hiddenKeys={hiddenKeys}
+            dragReorderEnabled={dragReorderEnabled}
+            dragUuid={dragUuid}
+            onDragStartRow={handleDragStart}
+            onDragEndRow={handleDragEnd}
+            onDragOverRow={handleDragOver}
+            onDropRow={handleDrop}
+          />
         ))}
       </div>
       </div>

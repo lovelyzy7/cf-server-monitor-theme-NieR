@@ -5,6 +5,8 @@ import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
 import { OsLogo } from "@/components/ui/OsLogo";
 import { useNodeCardModel } from "@/hooks/useNodeCardModel";
+import { useRateSparkSamples, type RateSparkSample } from "@/services/rateSparkStore";
+import { useNieRHoverLabel } from "@/components/ui/NieRHoverLabel";
 import { useLanguage } from "@/hooks/useLanguage";
 import { HOMEPAGE_PING_BUCKET_COUNT } from "@/hooks/usePingOverview";
 import { useThemeSettings } from "@/hooks/useThemeSettings";
@@ -116,27 +118,25 @@ function CompactTrafficPulse({ up, down }: { up: TrafficTrendSample[]; down: Tra
   );
 }
 
-function CompactTrafficSpark({ up, down }: { up: TrafficTrendSample[]; down: TrafficTrendSample[] }) {
+function CompactRateSpark({ samples }: { samples: RateSparkSample[] }) {
   const W = 72;
   const H = 18;
-  const N = TRAFFIC_DOT_COUNT;
-  const build = (samples: TrafficTrendSample[]) => {
-    const selected = samples.slice(-N);
-    const padding = N - selected.length;
+  const build = (pick: (sample: RateSparkSample) => number) => {
+    if (samples.length === 0) return "";
+    const max = Math.max(1, ...samples.map((sample) => Math.max(pick(sample), 0)));
     const pts: string[] = [];
-    for (let i = 0; i < N; i++) {
-      const s = i < padding ? null : selected[i - padding];
-      const level = s?.level ?? 0;
-      const x = N > 1 ? (i / (N - 1)) * W : W / 2;
-      const y = H - 1.5 - Math.max(0.05, level) * (H - 3);
+    samples.forEach((sample, index) => {
+      const level = Math.max(0, Math.min(1, pick(sample) / max));
+      const x = samples.length > 1 ? (index / (samples.length - 1)) * W : W / 2;
+      const y = H - 1.5 - Math.max(0.06, level) * (H - 3);
       pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
-    }
+    });
     return pts.join(" ");
   };
   return (
     <svg className="compact-traffic-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
-      <polyline points={build(up)} fill="none" stroke="var(--progress-memory)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
-      <polyline points={build(down)} fill="none" stroke="var(--progress-network)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+      <polyline points={build((s) => s.up)} fill="none" stroke="var(--progress-memory)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+      <polyline points={build((s) => s.down)} fill="none" stroke="var(--progress-network)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
@@ -321,13 +321,13 @@ function CompactNodeHeader({ node, osName }: { node: CompactNode; osName: string
       <div className="compact-node-title-wrap">
         <div className="compact-node-title-row">
           <Flag region={node.region} size={15} />
-          <Link to={`/server/${encodeURIComponent(node.uuid)}`} className="compact-node-title" title={node.name}>
+          <Link to={`/server/${encodeURIComponent(node.uuid)}`} className="compact-node-title">
             {node.name}
           </Link>
         </div>
       </div>
       <div className="compact-node-actions">
-        <Link to={`/server/${encodeURIComponent(node.uuid)}`} className="compact-node-detail-link" title={detailLabels.title} aria-label={detailLabels.ariaLabel}>
+        <Link to={`/server/${encodeURIComponent(node.uuid)}`} className="compact-node-detail-link" aria-label={detailLabels.ariaLabel}>
           <OsLogo value={node.os} size={15} />
         </Link>
       </div>
@@ -374,6 +374,7 @@ function CompactNodeVitals({ node, loadFraction }: { node: CompactNode; loadFrac
 function CompactNodeInfoStrip({
   node,
   trafficTrend,
+  rateSamples,
   upRate,
   downRate,
   showTrafficTotal,
@@ -381,6 +382,7 @@ function CompactNodeInfoStrip({
 }: {
   node: CompactNode;
   trafficTrend: { up: TrafficTrendSample[]; down: TrafficTrendSample[] };
+  rateSamples: RateSparkSample[];
   upRate: ByteRateDisplay;
   downRate: ByteRateDisplay;
   showTrafficTotal: boolean;
@@ -399,15 +401,17 @@ function CompactNodeInfoStrip({
       {showTrafficTotal && (
         <CompactInfoTile label={t("card.totalTraffic")} color="var(--fg-dark)">
           <div className="compact-traffic-total">
-            <span className="compact-traffic-arrows" aria-hidden>
-              <span className="is-up">↑</span>
-              <span className="is-down">↓</span>
+            <span className="compact-traffic-rows">
+              <span className="compact-traffic-row">
+                <span className="is-up" aria-hidden>↑</span>
+                <span className="tabular">{formatBytes(node.trafficUp)}</span>
+              </span>
+              <span className="compact-traffic-row">
+                <span className="is-down" aria-hidden>↓</span>
+                <span className="tabular">{formatBytes(node.trafficDown)}</span>
+              </span>
             </span>
-            <CompactTrafficSpark up={trafficTrend.up} down={trafficTrend.down} />
-            <span className="compact-traffic-values">
-              <span>{formatBytes(node.trafficUp)}</span>
-              <span>{formatBytes(node.trafficDown)}</span>
-            </span>
+            <CompactRateSpark samples={rateSamples} />
           </div>
         </CompactInfoTile>
       )}
@@ -497,11 +501,13 @@ const CompactNodeHealth = memo(function CompactNodeHealth({
 
 export const CompactNodeCard = memo(function CompactNodeCard({ uuid }: { uuid: string }) {
   const { t } = useLanguage();
+  const hoverLabel = useNieRHoverLabel();
   const model = useNodeCardModel(uuid, {
     pingBucketCount: HOMEPAGE_PING_BUCKET_COUNT,
     includeMultiPing: true,
   });
   const themeSettings = useThemeSettings();
+  const rateSamples = useRateSparkSamples(uuid, model.node?.netUp ?? null, model.node?.netDown ?? null);
 
   if (!model.node) {
     return <div className="compact-node-card" aria-busy style={{ minHeight: 120 }} />;
@@ -531,15 +537,23 @@ export const CompactNodeCard = memo(function CompactNodeCard({ uuid }: { uuid: s
   const showUptime = themeSettings.isReady && themeSettings.compactShowUptime;
   const showConnections = themeSettings.isReady && themeSettings.showConnections;
   const uptimeLabel = showUptime && !isOffline ? formatCompactUptime(node.uptime, t) : "";
+  const detailLabels = nodeDetailLinkLabels(node.name, osName, t);
 
   return (
-    <article className={clsx("compact-node-card", isOffline && "is-offline")}>
+    <article
+      className={clsx("compact-node-card", isOffline && "is-offline")}
+      onPointerEnter={(event) => hoverLabel.show(event, detailLabels.title)}
+      onPointerMove={hoverLabel.move}
+      onPointerLeave={hoverLabel.hide}
+    >
+      {hoverLabel.node}
       <CompactNodeHeader node={node} osName={osName} />
       <CompactNodeChips subtitle={subtitle} tags={footerTags} ipv4={node.ipv4} ipv6={node.ipv6} />
       <CompactNodeVitals node={node} loadFraction={loadFraction} />
       <CompactNodeInfoStrip
         node={node}
         trafficTrend={trafficTrend}
+        rateSamples={rateSamples}
         upRate={upRate}
         downRate={downRate}
         showTrafficTotal={showTrafficTotal}
@@ -562,8 +576,7 @@ export const CompactNodeCard = memo(function CompactNodeCard({ uuid }: { uuid: s
       <Link
         to={`/server/${encodeURIComponent(uuid)}`}
         className="card-stretched-link"
-        aria-label={nodeDetailLinkLabels(node.name, osName, t).ariaLabel}
-        title={nodeDetailLinkLabels(node.name, osName, t).title}
+        aria-label={detailLabels.ariaLabel}
       />
     </article>
   );

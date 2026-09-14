@@ -4074,3 +4074,217 @@ body .metric-color-swatch input {
     display: inline-flex;
   }
 }
+
+/* ====================================================================
+ * 41. 本轮：指标两行数值、COMPACT 两行流量+实时曲线、悬浮标签、分组表格、
+ *     LIST 行拖动、拖动取色、设置页对称按钮
+ * ==================================================================== */
+
+/* LARGE 占比条：右侧数值两行（百分数 / 配置小字），行内不再挤 */
+.metric-row .metric-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.2;
+}
+.metric-row .metric-value strong {
+  font-weight: normal;
+  font-size: 11px;
+}
+.metric-row .metric-value small {
+  font-size: 9px;
+  color: var(--fg-mid);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* COMPACT 累计流量：第一行 ↑+上行值，第二行 ↓+下行值，曲线贯穿两行居中 */
+.compact-traffic-total {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.compact-traffic-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: none;
+  min-width: 0;
+}
+.compact-traffic-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.compact-traffic-row .is-up { color: var(--progress-memory); }
+.compact-traffic-row .is-down { color: var(--progress-network); }
+.compact-traffic-spark {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 30px;
+  display: block;
+}
+
+/* 替换原生 title 的 NieR 悬浮标签（跟随鼠标） */
+.nier-hover-label {
+  position: fixed;
+  z-index: 95;
+  max-width: 260px;
+  background: var(--panel);
+  color: var(--fg-dark);
+  border: var(--border-thick);
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nier-hover-label::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  border-top: var(--border-thick);
+  border-left: var(--border-thick);
+}
+.nier-hover-label::after {
+  content: "";
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-bottom: var(--border-thick);
+  border-right: var(--border-thick);
+}
+
+/* 设置-分组顺序：LIST 表格样式（序号 | 手柄 | 名称） */
+.group-order-list {
+  border: var(--border-thick);
+  background: var(--panel);
+}
+.group-order-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--bg-cream-dark);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: var(--cur-pointer);
+}
+.group-order-item:last-child {
+  border-bottom: none;
+}
+.group-order-item[data-dragging="true"] {
+  opacity: 0.45;
+  background: var(--bg-cream-dark);
+}
+.group-order-handle {
+  cursor: grab;
+  color: var(--fg-mid);
+  font-size: 14px;
+  line-height: 1;
+}
+.group-order-index {
+  color: var(--fg-mid);
+  font-size: 10px;
+  min-width: 18px;
+  text-align: right;
+}
+.group-order-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* LIST 表格行拖动排序（首列发起） */
+.node-list-row.is-reorderable {
+  cursor: default;
+}
+.node-list-drag-handle {
+  cursor: grab;
+  color: var(--fg-mid);
+  font-size: 14px;
+  line-height: 1;
+  margin-right: 8px;
+  flex: none;
+}
+.node-list-row[data-dragging="true"] {
+  opacity: 0.45;
+}
+.node-list-row[data-drop-target="true"] {
+  outline: 1px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+/* 内置拖动取色：饱和度/明度方块 + 色相条 */
+.metric-color-drag {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 100%;
+  min-width: 200px;
+  margin-bottom: 6px;
+}
+.metric-color-sv {
+  position: relative;
+  height: 96px;
+  border: var(--border-thick);
+  cursor: crosshair;
+  touch-action: none;
+}
+.metric-color-sv-thumb {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--fg-dark);
+  box-shadow: 0 0 0 1px var(--bg-cream);
+  pointer-events: none;
+}
+.metric-color-hue {
+  position: relative;
+  height: 14px;
+  border: var(--border-thick);
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+  cursor: pointer;
+  touch-action: none;
+}
+.metric-color-hue-thumb {
+  position: absolute;
+  top: -3px;
+  width: 6px;
+  height: 16px;
+  transform: translateX(-50%);
+  border: 1px solid var(--fg-dark);
+  box-shadow: 0 0 0 1px var(--bg-cream);
+  pointer-events: none;
+}
+
+/* 设置页 tab-bar 对称分布：所有双数按钮等宽铺满 */
+.theme-manage .tab-bar {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+.theme-manage .tab-btn {
+  text-align: center;
+  padding-left: 4px;
+  padding-right: 4px;
+}
