@@ -53,6 +53,20 @@ export function Instance() {
   const [loadHours, setLoadHours] = useState(0);
   const [pingHours, setPingHours] = useState(DEFAULT_PING_HOURS);
   const chartControlsRef = useRef<HTMLDivElement | null>(null);
+  const topbarRef = useRef<HTMLDivElement | null>(null);
+
+  // 吸顶条：图表控制条需要叠在顶部工具条之下，量出工具条高度给 CSS 变量。
+  useEffect(() => {
+    const el = topbarRef.current;
+    if (!el) return;
+    const update = () => {
+      document.documentElement.style.setProperty("--instance-topbar-h", `${Math.round(el.getBoundingClientRect().height)}px`);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const maxHistoryHours = me?.logged_in ? MAX_HISTORY_HOURS : ANONYMOUS_MAX_HISTORY_HOURS;
 
@@ -99,7 +113,7 @@ export function Instance() {
 
   return (
     <div className="instance-page">
-      <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+      <div ref={topbarRef} className="page-sticky-bar instance-topbar">
         <Link className="instance-page-back" to="/">{t("common.back")}</Link>
         <InstanceSwitcher currentUuid={uuid} />
       </div>
@@ -163,10 +177,10 @@ export function Instance() {
         </dl>
       </div>
 
-      <div ref={chartControlsRef} style={{ marginTop: 16 }}>
+      <div ref={chartControlsRef} className="page-sticky-bar chart-controls-bar">
         <div className="tab-bar">
           <button type="button" className={clsx("tab-btn", chartType === "load" && "active")} aria-pressed={chartType === "load"} onClick={() => startTransition(() => setChartType("load"))}>
-            负载
+            {t("detail.load")}
           </button>
           {showPingChart && (
             <button type="button" className={clsx("tab-btn", chartType === "ping" && "active")} aria-pressed={chartType === "ping"} onClick={() => startTransition(() => setChartType("ping"))}>

@@ -338,7 +338,7 @@ const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hidd
       )}
 
       {!hiddenKeys.has("traffic") && (
-        <div className="col-traffic" title={`剩余 ${traffic.remainingLabel} · ${traffic.detail}`}>
+        <div className="col-traffic" title={`${t("traffic.remaining")} ${traffic.remainingLabel} · ${traffic.detail}`}>
           <div className="node-list-traffic-rows">
             <StackLine icon="↑" value={formatBytes(node.trafficUp)} />
             <StackLine icon="↓" value={formatBytes(node.trafficDown)} />

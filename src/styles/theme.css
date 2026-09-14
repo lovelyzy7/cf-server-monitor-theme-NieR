@@ -4558,3 +4558,186 @@ body .metric-color-swatch input {
   width: 100%;
   height: 16px;
 }
+
+/* ====================================================================
+ * 45. 本轮：顶部导航常驻 + 页面吸顶条、内置日期弹窗、布局按钮对齐微调
+ * ==================================================================== */
+
+/* 顶部导航区（终端栏 + 主导航）常驻顶部 */
+.app-head {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: var(--bg-cream);
+}
+
+/* 页面吸顶条：返回 / 按钮 / 时间选择，常驻导航栏下方原位置 */
+.page-sticky-bar {
+  position: sticky;
+  top: var(--app-head-h, 0px);
+  z-index: 45;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--bg-cream);
+  padding: 10px 0;
+  margin: 0 0 12px;
+}
+.page-sticky-bar > * {
+  flex-wrap: wrap;
+}
+/* 实例页图表控制条叠在顶部工具条之下 */
+.page-sticky-bar.chart-controls-bar {
+  top: calc(var(--app-head-h, 0px) + var(--instance-topbar-h, 0px));
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 6px 0 10px;
+}
+.page-sticky-bar.chart-controls-bar .tab-bar {
+  margin-top: 6px;
+}
+
+/* 内置日期弹窗：触发按钮 + 日历面板（NieR 风格） */
+.nier-date-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.nier-date-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-cream);
+  border: var(--border-thin);
+  padding: 5px 10px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dark);
+  cursor: var(--cur-pointer);
+}
+.nier-date-trigger:hover {
+  background: var(--bg-cream-dark);
+}
+.nier-date-panel {
+  position: fixed;
+  z-index: 80;
+  width: 252px;
+  background: var(--panel);
+  color: var(--fg-dark);
+  border: var(--border-thick);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.nier-date-panel::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 12px;
+  height: 12px;
+  border-top: var(--border-thick);
+  border-left: var(--border-thick);
+}
+.nier-date-panel::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  border-bottom: var(--border-thick);
+  border-right: var(--border-thick);
+}
+.nier-date-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.nier-date-title {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.nier-date-nav {
+  background: transparent;
+  border: var(--border-thin);
+  color: var(--fg-dark);
+  width: 24px;
+  height: 24px;
+  line-height: 1;
+  cursor: var(--cur-pointer);
+  font-size: 14px;
+}
+.nier-date-nav:hover {
+  background: var(--bg-cream-dark);
+}
+.nier-date-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.nier-date-week span {
+  text-align: center;
+  font-size: 10px;
+  color: var(--fg-mid);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.nier-date-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.nier-date-day {
+  height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg-dark);
+  cursor: var(--cur-pointer);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.nier-date-day:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg-cream-dark);
+}
+.nier-date-day.is-selected {
+  background: var(--accent);
+  color: var(--bg-cream);
+}
+.nier-date-day.is-today {
+  outline: 1px solid var(--fg-mid);
+  outline-offset: -1px;
+}
+.nier-date-day:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.nier-date-day.is-empty {
+  cursor: default;
+}
+
+/* 首页布局按钮与排序按钮最终对齐：固定高度、统一盒模型 */
+.home-sort-trigger,
+.home-grid-trigger {
+  height: 30px;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+.home-controls-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-grid-control {
+  display: inline-flex;
+  align-items: center;
+}

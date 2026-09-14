@@ -1,6 +1,6 @@
 import { useLanguage } from "@/hooks/useLanguage";
 import { Outlet, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BackgroundLayer } from "./BackgroundLayer";
 import { TerminalBar } from "./TerminalBar";
@@ -22,6 +22,21 @@ export function AppShell() {
   useAppearance();
   useSiteMetadata();
   useMetricColorsSync();
+  const headRef = useRef<HTMLDivElement | null>(null);
+
+  // 顶部导航区（终端栏 + 主导航）常驻顶部：量出高度供页面吸顶条使用。
+  useEffect(() => {
+    const el = headRef.current;
+    if (!el) return;
+    const update = () => {
+      document.documentElement.style.setProperty("--app-head-h", `${Math.round(el.getBoundingClientRect().height)}px`);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   const { pathname, search } = useLocation();
   const publicConfig = usePublicConfig();
   const auth = useAuth();
@@ -82,7 +97,9 @@ export function AppShell() {
   return (
     <>
       <BackgroundLayer />
-      <TerminalBar pingRefresh={pingRefresh} />
+      <div className="app-head" ref={headRef}>
+        <TerminalBar pingRefresh={pingRefresh} />
+      </div>
       <TurnstileGate />
       <main className="app-main">
         {isCheckingShell ? (

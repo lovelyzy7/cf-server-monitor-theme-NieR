@@ -10,6 +10,7 @@ import { useTodayTrafficStats } from "@/hooks/useTodayTrafficStats";
 import { useVisibleNodes } from "@/hooks/useVisibleNodes";
 import { useHomeNodeSummaries } from "@/hooks/useNode";
 import { usePacedRate } from "@/hooks/usePacedRate";
+import { NieRDatePicker, fromDateInputValue, localDayMs, toDateInputValue as pickerToDateInput } from "@/components/traffic/NieRDatePicker";
 import { useLanguage, type I18nKey } from "@/hooks/useLanguage";
 import { useAuth } from "@/hooks/useAuth";
 import { clearHistoryCache, getLoadRecords } from "@/services/api";
@@ -289,13 +290,12 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
       </div>
       <label className="node-chart-date">
         <span>{t("traffic.startDate")}</span>
-        <input
-          type="date"
-          className="nie-date-input"
-          value={customDate ?? toDateInputValue(anchorMs)}
-          min={toDateInputValue(anchorMs - retentionMs)}
-          max={toDateInputValue(anchorMs)}
-          onChange={(e) => selectDate(e.target.value)}
+        <NieRDatePicker
+          value={customDate != null ? fromDateInputValue(customDate) : localDayMs(anchorMs)}
+          min={anchorMs - retentionMs}
+          max={anchorMs}
+          onChange={(ms) => selectDate(ms != null ? pickerToDateInput(ms) : "")}
+          ariaLabel={t("traffic.startDate")}
         />
         {beyondRetention && <em>{t("traffic.retention")}</em>}
       </label>
@@ -474,20 +474,16 @@ export function Traffic() {
 
   return (
     <div>
-      <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+      <div className="page-sticky-bar traffic-topbar">
         <Link className="button" to="/">{t("common.back")}</Link>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-mid)" }}>
-            日期
-            <input
-              type="date"
-              value={toDateInputValue(dayStartMs)}
-              min={toDateInputValue(todayStartMs - maxDayOffset * DAY_MS)}
-              max={toDateInputValue(todayStartMs)}
-              onChange={(e) => setSelectedDate(e.target.value || null)}
-              className="nie-date-input"
-            />
-          </label>
+          <NieRDatePicker
+            value={dayStartMs}
+            min={todayStartMs - maxDayOffset * DAY_MS}
+            max={todayStartMs}
+            onChange={(ms) => setSelectedDate(ms != null ? toDateInputValue(ms) : null)}
+            ariaLabel={t("traffic.date")}
+          />
           <TrafficSortControl field={sortField} direction={sortDirection} onSelect={handleSort} />
           <button type="button" onClick={refetch} disabled={isFetching || nodes.length === 0} aria-busy={isFetching} title={t("common.refresh")}>
             ⟳ {t("common.refresh")}
