@@ -71,7 +71,7 @@ export function NieRDatePicker({
         setViewMonth(base.getMonth());
         const rect = triggerRef.current?.getBoundingClientRect();
         if (rect) {
-          const left = Math.min(rect.left, Math.max(8, window.innerWidth - 268));
+          const left = Math.min(rect.left, Math.max(8, window.innerWidth - 280));
           const flipUp = rect.bottom + PANEL_ESTIMATE_HEIGHT > window.innerHeight - 8;
           setPanelPos({
             left,
@@ -117,7 +117,7 @@ export function NieRDatePicker({
     if (!rect) return;
     const height = panel.getBoundingClientRect().height;
     const flipUp = rect.bottom + height + 8 > window.innerHeight - 8;
-    const left = Math.min(rect.left, Math.max(8, window.innerWidth - 268));
+    const left = Math.min(rect.left, Math.max(8, window.innerWidth - 280));
     setPanelPos({
       left,
       top: flipUp ? Math.max(8, rect.top - height - 8) : rect.bottom + 8,

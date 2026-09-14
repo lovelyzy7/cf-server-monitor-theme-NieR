@@ -4624,14 +4624,16 @@ body .metric-color-swatch input {
 .nier-date-panel {
   position: fixed;
   z-index: 80;
-  width: 252px;
+  width: 264px;
+  box-sizing: border-box;
   background: var(--panel);
   color: var(--fg-dark);
   border: var(--border-thick);
   box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
-  padding: 10px 12px;
+  padding: 10px 10px;
   font-family: var(--font-mono);
   font-size: 12px;
+  overflow: hidden;
 }
 .nier-date-panel::before {
   content: "";
@@ -4659,6 +4661,9 @@ body .metric-color-swatch input {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 8px;
+  width: 236px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .nier-date-title {
   letter-spacing: 0.12em;
@@ -4666,22 +4671,28 @@ body .metric-color-swatch input {
   font-size: 12px;
 }
 .nier-date-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   background: transparent;
   border: var(--border-thin);
   color: var(--fg-dark);
-  width: 24px;
-  height: 24px;
-  line-height: 1;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   cursor: var(--cur-pointer);
   font-size: 14px;
+  line-height: 1;
 }
 .nier-date-nav:hover {
   background: var(--bg-cream-dark);
 }
 .nier-date-week {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, 32px);
   gap: 2px;
+  justify-content: center;
   margin-bottom: 4px;
 }
 .nier-date-week span {
@@ -4693,17 +4704,21 @@ body .metric-color-swatch input {
 }
 .nier-date-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, 32px);
   gap: 2px;
+  justify-content: center;
 }
 .nier-date-day {
   height: 28px;
+  width: 32px;
+  box-sizing: border-box;
   background: transparent;
   border: 1px solid transparent;
   color: var(--fg-dark);
   cursor: var(--cur-pointer);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 .nier-date-day:hover:not(:disabled) {
   border-color: var(--accent);
