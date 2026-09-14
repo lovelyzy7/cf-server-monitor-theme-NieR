@@ -252,8 +252,7 @@ const MiniHealth = memo(function MiniHealth({
     <div
       className="mini-node-health"
       data-ping-state={ping.loadState ?? "ready"}
-      onPointerEnter={(event) => event.stopPropagation()}
-      onPointerMove={(event) => event.stopPropagation()}
+      data-nier-suppress-label
     >
       <div className="mini-node-health-item">
         <div className="mini-node-health-head">

@@ -67,7 +67,7 @@ function CompactGauge({
   } as CSSProperties;
 
   return (
-    <div className="compact-node-gauge" style={style} title={detail ? `${label} ${value} · ${detail}` : `${label} ${value}`}>
+    <div className="compact-node-gauge" style={style}>
       <div className="compact-node-gauge-head">
         <span className="compact-node-gauge-label">
           {icon}
@@ -481,8 +481,7 @@ const CompactNodeHealth = memo(function CompactNodeHealth({
     <div
       className="compact-node-bottom"
       data-ping-state={ping.loadState ?? "ready"}
-      onPointerEnter={(event) => event.stopPropagation()}
-      onPointerMove={(event) => event.stopPropagation()}
+      data-nier-suppress-label
     >
       <CompactHealthItem icon={<span aria-hidden>◔</span>} label={t("ping.latency")} value={ping.lastValue != null ? Math.round(ping.lastValue).toString() : emptyText} unit={ping.lastValue != null ? "ms" : undefined} color={latencyColor}>
         <HealthBars buckets={pingBuckets} kind="latency" />

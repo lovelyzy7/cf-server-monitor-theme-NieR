@@ -108,7 +108,7 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
         m.homepagePingLines.length > 0 ? (
           <MultiPingStatus uuid={node.uuid} lines={m.homepagePingLines} density="large" />
         ) : m.pingBuckets.length > 0 ? (
-        <div style={{ marginTop: 10 }} onPointerEnter={(event) => event.stopPropagation()} onPointerMove={(event) => event.stopPropagation()}>
+        <div style={{ marginTop: 10 }} data-nier-suppress-label>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
             <span className="metric-label" style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--fg-mid)", letterSpacing: "0.08em", textTransform: "uppercase" }}>
               {t("ping.latency")}

@@ -45,8 +45,9 @@ const MultiPingMetricRow = memo(function MultiPingMetricRow({
   return (
     <div
       className="multi-ping-metric-row"
+      data-nier-suppress-label
       data-load-state={line.loadState ?? "ready"}
-      title={`${line.taskName} · ${t("ping.latency")} ${latencyLabel} · ${t("ping.loss")} ${lossLabel}${staleError ? ` · ${t("card.homePing.refreshFail")}` : ""}`}
+      aria-label={`${line.taskName} · ${t("ping.latency")} ${latencyLabel} · ${t("ping.loss")} ${lossLabel}${staleError ? ` · ${t("card.homePing.refreshFail")}` : ""}`}
     >
       <div className={clsx("multi-ping-metric-head", metric === "loss" && "is-value-only")}>
         {metric === "latency" && <PingLineSwitcher uuid={uuid} slot={slot} taskName={line.taskName} />}
@@ -104,7 +105,7 @@ export const MultiPingStatus = memo(function MultiPingStatus({
   const redrawKey = `${resolvedAppearance}:${colorsVersion}`;
 
   return (
-    <div className={clsx("multi-ping-status", className)} role="group" aria-label={t("card.lines")}>
+    <div className={clsx("multi-ping-status", className)} role="group" aria-label={t("card.lines")} data-nier-suppress-label>
       <div className="multi-ping-columns">
         <MultiPingMetricColumn uuid={uuid} lines={lines} metric="latency" density={density} redrawKey={redrawKey} />
         <MultiPingMetricColumn uuid={uuid} lines={lines} metric="loss" density={density} redrawKey={redrawKey} />

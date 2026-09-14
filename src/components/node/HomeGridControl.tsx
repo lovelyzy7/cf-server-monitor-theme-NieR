@@ -13,7 +13,7 @@ import {
 import { normalizeThemeSettings } from "@/utils/themeSettings";
 
 /** 首页网格布局（几乘几）选项：0 = 自动，1~6 = 固定列数。 */
-const GRID_OPTIONS = [0, 1, 2, 3, 4, 5, 6] as const;
+const GRID_OPTIONS = [0, 1, 2, 3, 4] as const;
 
 /**
  * 首页排序按钮左侧的「九宫格」布局下拉栏。

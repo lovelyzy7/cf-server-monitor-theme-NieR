@@ -401,7 +401,7 @@ export function NodeGrid() {
       <div className="home-controls-bar">
         {showGroupTabs && <GroupTabs groups={groupOptions} selectedGroup={selectedGroup} onSelectGroup={setSelectedGroup} />}
         <div className="home-controls-right">
-          <HomeGridControl />
+          {mode !== "list" && <HomeGridControl />}
           {showHomeSort && <HomeSortControl state={sort} />}
         </div>
       </div>

@@ -8,10 +8,16 @@ import { createPortal } from "react-dom";
 export function useNieRHoverLabel() {
   const [state, setState] = useState<{ x: number; y: number; text: string } | null>(null);
 
-  const show = useCallback((event: { clientX: number; clientY: number }, text: string) => {
-    if (!text) return;
-    setState({ x: event.clientX + 16, y: event.clientY + 18, text });
-  }, []);
+  const show = useCallback(
+    (event: { clientX: number; clientY: number; target?: EventTarget | null }, text: string) => {
+      if (!text) return;
+      // 带自身提示的区域（延迟柱详情等）不再叠加整卡标签。
+      const target = event.target as HTMLElement | null;
+      if (target?.closest?.("[data-nier-suppress-label]")) return;
+      setState({ x: event.clientX + 16, y: event.clientY + 18, text });
+    },
+    [],
+  );
 
   const move = useCallback((event: { clientX: number; clientY: number }) => {
     setState((prev) => (prev ? { ...prev, x: event.clientX + 16, y: event.clientY + 18 } : prev));
