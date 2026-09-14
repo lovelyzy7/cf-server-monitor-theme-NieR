@@ -278,7 +278,7 @@ export function ThemeManage() {
 
   return (
     <div className="theme-manage">
-      <div className="theme-masthead-topline" style={{ marginTop: 16 }}>
+      <div className="page-sticky-bar theme-manage-topbar theme-masthead-topline">
         <Link className="instance-page-back" to="/">{t("common.backHome")}</Link>
         <div className="theme-manage-toolbar-actions">
           <button type="button" className="theme-manage-button" onClick={handleReset} disabled={!isDirty || saving} title={t("manage.resetHint")}>{t("manage.reset")}</button>

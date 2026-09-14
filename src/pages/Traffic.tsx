@@ -295,6 +295,7 @@ function TrafficSamplePanel({ uuid, live }: { uuid: string; live: { up: number; 
           min={anchorMs - retentionMs}
           max={anchorMs}
           onChange={(ms) => selectDate(ms != null ? pickerToDateInput(ms) : "")}
+          onClear={() => selectDate("")}
           ariaLabel={t("traffic.startDate")}
         />
         {beyondRetention && <em>{t("traffic.retention")}</em>}

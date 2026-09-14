@@ -4741,3 +4741,44 @@ body .metric-color-swatch input {
   display: inline-flex;
   align-items: center;
 }
+
+/* ====================================================================
+ * 46. 本轮：设置页工具条吸顶、日历弹窗底部按钮/翻页细节
+ * ==================================================================== */
+
+/* 设置页工具条：吸顶 + 小屏可换行，按钮不挤在一起 */
+.page-sticky-bar.theme-manage-topbar {
+  align-items: center;
+}
+.theme-manage-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 日历弹窗底部：今天 / 清除 */
+.nier-date-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--bg-cream-dark);
+}
+.nier-date-today,
+.nier-date-clear {
+  background: transparent;
+  border: var(--border-thin);
+  color: var(--fg-dark);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  cursor: var(--cur-pointer);
+}
+.nier-date-today:hover,
+.nier-date-clear:hover {
+  background: var(--bg-cream-dark);
+}
