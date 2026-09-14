@@ -152,6 +152,12 @@ export function ThemeManage() {
     [availableGroups, draft.homeGroupOrder],
   );
   const [dragGroup, setDragGroup] = useState<string | null>(null);
+  // 卡片布局：先选列数、点确认才写入草稿。
+  const [pendingColumns, setPendingColumns] = useState<number>(() => sourceSettings.gridColumns);
+  // 草稿列数被重置/回流时同步待选值。
+  useEffect(() => {
+    setPendingColumns(draft.gridColumns);
+  }, [draft.gridColumns]);
   const dropGroupOn = (target: string) => {
     if (!dragGroup || dragGroup === target) return;
     const next = [...draft.homeGroupOrder];
@@ -325,7 +331,6 @@ export function ThemeManage() {
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
         <h2 className="bracket-header" style={{ fontSize: 14 }}>首页排序</h2>
-        <ToggleRow label="允许访客排序" desc="首页右上角排序控件；关闭后始终用下方默认排序" checked={draft.enableHomeSort} onPatch={(v) => patch("enableHomeSort", v)} />
         <div style={{ marginTop: 8 }}>
           <span style={{ fontSize: 11, color: "var(--fg-mid)", letterSpacing: "0.1em", textTransform: "uppercase" }}>默认排序</span>
           <div className="tab-bar">
@@ -355,17 +360,24 @@ export function ThemeManage() {
         <ToggleRow label="显示分组页签" desc="按节点分组切换" checked={draft.showGroupTabs} onPatch={(v) => patch("showGroupTabs", v)} />
         <ToggleRow label="显示地区统计" desc="按地区聚合" checked={draft.showRegionBar} onPatch={(v) => patch("showRegionBar", v)} />
         <ToggleRow label="卡片显示分组" checked={draft.showCardGroup} onPatch={(v) => patch("showCardGroup", v)} />
-        <ToggleRow label="卡片显示价格" checked={draft.showCardPrice} onPatch={(v) => patch("showCardPrice", v)} />
       </div>
 
       <div className="panel panel-corners" style={{ marginTop: 16 }}>
-        <h2 className="bracket-header" style={{ fontSize: 14 }}>卡片布局（几乘几）</h2>
+        <h2 className="bracket-header" style={{ fontSize: 14 }}>卡片布局</h2>
         <div className="tab-bar">
           {GRID_COLUMN_OPTIONS.map((count) => (
-            <button key={count} type="button" className={clsx("tab-btn", draft.gridColumns === count && "active")} onClick={() => patch("gridColumns", count)}>
+            <button key={count} type="button" className={clsx("tab-btn", pendingColumns === count && "active")} onClick={() => setPendingColumns(count)}>
               {count === 0 ? "自动" : `${count} 列`}
             </button>
           ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+          <button type="button" className="theme-manage-button is-compact" onClick={() => patch("gridColumns", pendingColumns)}>
+            确认
+          </button>
+          <span style={{ fontSize: 11, color: "var(--fg-mid)" }}>
+            {draft.gridColumns === pendingColumns ? "已应用" : "尚未应用，点击确认后生效"}
+          </span>
         </div>
         <p style={{ fontSize: 11, color: "var(--fg-mid)", marginTop: 8 }}>
           「自动」按卡片最小宽度自适配列数；选固定列数后，首页大/小/迷你卡片都按该列数排列。

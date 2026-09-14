@@ -193,10 +193,15 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
           <span>YoRHa</span>
           <span>Bunker Terminal</span>
           <span style={{ opacity: 0.85 }}>{siteTitle}</span>
+          {storeStatus.hydrated && total > 0 && (
+            <span className="user-pill terminal-pill-left">
+              NODES {online}/{total}
+            </span>
+          )}
         </div>
         <div className="right">
           {storeStatus.hydrated && total > 0 && (
-            <span className="user-pill">
+            <span className="user-pill terminal-pill-right">
               NODES {online}/{total}
             </span>
           )}
@@ -279,7 +284,7 @@ export function TerminalBar({ pingRefresh }: { pingRefresh: PingHistoryRefreshSt
             title="更多"
             onClick={() => setMenuOpen((value) => !value)}
           >
-            ≡
+            <span className="menu-icon" aria-hidden />
           </button>
         </div>
       </div>

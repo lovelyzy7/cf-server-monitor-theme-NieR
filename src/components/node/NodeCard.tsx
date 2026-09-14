@@ -77,11 +77,14 @@ export function NodeCard({ node, model }: { node: NodeInfo; model: CardModel }) 
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <MetricBar label="CPU" percent={merged?.cpuPct ?? 0} colorVar="--progress-cpu" />
+        <MetricBar label="CPU" percent={merged?.cpuPct ?? 0} colorVar="--progress-cpu"
+          valueText={merged ? `${Math.round(merged.cpuPct)}% · ${merged.cpu_cores || 0} 核` : undefined} />
         <MetricBar label="MEM" percent={merged?.ramPct ?? 0} colorVar="--progress-memory"
-          valueText={merged ? `${formatBytes(merged.ramUsed)} / ${formatBytes(merged.ramTotal)}` : undefined} />
-        <MetricBar label="SWAP" percent={merged && merged.swapTotal > 0 ? (merged.swapUsed / merged.swapTotal) * 100 : 0} colorVar="--progress-swap" />
-        <MetricBar label="DISK" percent={merged?.diskPct ?? 0} colorVar="--progress-disk" />
+          valueText={merged ? `${Math.round(merged.ramPct)}% · ${formatBytes(merged.ramUsed)} / ${formatBytes(merged.ramTotal)}` : undefined} />
+        <MetricBar label="SWAP" percent={merged && merged.swapTotal > 0 ? (merged.swapUsed / merged.swapTotal) * 100 : 0} colorVar="--progress-swap"
+          valueText={merged ? (merged.swapTotal > 0 ? `${Math.round((merged.swapUsed / merged.swapTotal) * 100)}% · ${formatBytes(merged.swapUsed)} / ${formatBytes(merged.swapTotal)}` : "0% · 未配置") : undefined} />
+        <MetricBar label="DISK" percent={merged?.diskPct ?? 0} colorVar="--progress-disk"
+          valueText={merged ? `${Math.round(merged.diskPct)}% · ${formatBytes(merged.diskUsed)} / ${formatBytes(merged.diskTotal)}` : undefined} />
       </div>
 
       {m.shouldRenderPingBars && (

@@ -117,8 +117,8 @@
 :root[data-appearance="dark"] .terminal-bar .right {
   color: #968e75;
 }
-:root[data-appearance="dark"] .terminal-bar .right .user-pill,
-:root[data-appearance="dark"] .terminal-bar .right .user-pill a {
+:root[data-appearance="dark"] .terminal-bar .user-pill,
+:root[data-appearance="dark"] .terminal-bar .user-pill a {
   color: #e6dfc9;
 }
 :root[data-appearance="dark"] .terminal-bar .control-button {
@@ -3755,4 +3755,34 @@ body .metric-color-swatch input {
   .terminal-menu-picker .home-sort-panel {
     position: static;
   }
+}
+
+/* ====================================================================
+ * 37. NODES 移动端居左 + 下拉栏三横线图标（等长）
+ * ==================================================================== */
+.terminal-pill-left {
+  display: none;
+}
+/* 三横线：三条等长横线（box-shadow 绘制，消除字符长短不一） */
+.menu-icon {
+  display: inline-block;
+  width: 14px;
+  height: 2px;
+  background: currentColor;
+  box-shadow: 0 4px 0 currentColor, 0 -4px 0 currentColor;
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .terminal-pill-right {
+    display: none;
+  }
+  .terminal-pill-left {
+    display: inline;
+  }
+  /* 右侧四键顺序：刷新 → 主题切换 → 语言 → 下拉栏（NODES 已移到左侧品牌旁） */
+  .terminal-bar .right .terminal-btn-refresh { order: 1; }
+  .terminal-bar .right .terminal-btn-theme { order: 2; }
+  .terminal-bar .right .terminal-btn-lang { order: 3; }
+  .terminal-bar .right .terminal-menu { order: 4; }
 }
