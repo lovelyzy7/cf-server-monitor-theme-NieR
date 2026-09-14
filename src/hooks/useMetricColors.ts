@@ -343,17 +343,17 @@ export function useMetricColorsEditor() {
       // 丢本机覆盖、拉最新后端：当前设备立即以刚存的后端配置为准（和设置页一致）。
       resetLocalThemeSettings();
       void refetchConfig();
-      setBackendSaveState({ kind: "ok", text: "已保存到后端" });
+      setBackendSaveState({ kind: "ok", text: "manage.saveSiteDone" });
     } catch (error) {
       const status = error instanceof ApiRequestError ? error.status : 0;
       const text =
         status === 401
-          ? "登录态已失效，请到 /admin 重新登录"
+          ? "manage.loginExpired"
           : status === 403
-            ? "需要先完成人机验证，完成后再点一次"
+            ? "manage.turnstile"
             : error instanceof Error
               ? error.message
-              : "保存到后端失败";
+              : "manage.saveSiteFail";
       if (status === 403) void refetchConfig();
       setBackendSaveState({ kind: "error", text });
     } finally {

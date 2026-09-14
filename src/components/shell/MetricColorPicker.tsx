@@ -1,4 +1,4 @@
-import { translate, useLanguage } from "@/hooks/useLanguage";
+import { translate, useLanguage, type I18nKey } from "@/hooks/useLanguage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Spinner } from "@/components/ui/Spinner";
 import { usePreferences } from "@/hooks/usePreferences";
@@ -197,7 +197,7 @@ export function MetricColorPicker({ hidden = false }: { hidden?: boolean }) {
       </div>
       {backendSaveState && (
         <div className={backendSaveState.kind === "ok" ? "metric-color-notice" : "metric-color-error"}>
-          {backendSaveState.text}
+          {t(backendSaveState.text as I18nKey)}
         </div>
       )}
       {saveError && <div className="metric-color-error">{t("manage.saveFail")}（{t("manage.loginExpired")}）</div>}

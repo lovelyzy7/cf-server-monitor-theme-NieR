@@ -384,13 +384,16 @@ export function Traffic() {
     : 0;
   const effectiveOffset = Math.max(0, Math.min(rawOffset, maxDayOffset));
 
-  const dayStartMs = todayStartMs - effectiveOffset * DAY_MS;
-  const dayEndMs = dayStartMs + DAY_MS;
+  // 访客（已确认未登录）选往期时改用滚动最近 24 小时：后端匿名上限 24h，
+  // 按整天窗口会请求 48h 档位被拒绝，整页报错。
+  const isRolling24h = me != null && me.logged_in !== true && effectiveOffset > 0;
+  const dayStartMs = isRolling24h ? now - DAY_MS : todayStartMs - effectiveOffset * DAY_MS;
+  const dayEndMs = isRolling24h ? now : dayStartMs + DAY_MS;
 
   // 初始只取汇总（summary 模式跳过样本构建），展开某台节点时再按需拉明细。
   const todayQuery = useTodayTrafficStats(uuids, now, "summary");
   // 往期：逐节点拉对应档位历史，按当天窗口积分（与今日同一套口径）。
-  const hours = hoursTierForRange(dayStartMs, dayEndMs);
+  const hours = isRolling24h ? 24 : hoursTierForRange(dayStartMs, dayEndMs);
   const pastQueries = useQueries({
     queries: uuids.map((uuid) => ({
       queryKey: ["traffic-day", uuid, dayStartMs],
@@ -505,7 +508,7 @@ export function Traffic() {
         </div>
       ) : isError ? (
         <div className="banner error" role="alert">
-          &gt; ERROR :: 无法读取流量统计
+          &gt; ERROR :: {t("traffic.statsError")}
           <div style={{ marginTop: 8 }}><button type="button" onClick={refetch}>{t("common.retry")}</button></div>
         </div>
       ) : (
@@ -513,9 +516,14 @@ export function Traffic() {
           <div className="traffic-summary-grid">
             <div className="panel inverse panel-corners traffic-summary-card">
               <div className="traffic-summary-head">
-                <span>{t("traffic.today")}</span>
-                <span>{DAY_FORMATTER.format(dayStartMs)}</span>
+                <span>{isRolling24h ? t("traffic.last24h") : t("traffic.today")}</span>
+                <span>{!isRolling24h && DAY_FORMATTER.format(dayStartMs)}</span>
               </div>
+              {isRolling24h && (
+                <p style={{ margin: "0 0 8px", fontSize: 11, opacity: 0.75 }}>
+                  {t("traffic.needLogin")}
+                </p>
+              )}
               <strong className="traffic-summary-total">
                 {sampledDetails.length > 0 ? formatBytes(totalUp + totalDown) : "—"}
               </strong>
