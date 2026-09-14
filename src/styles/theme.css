@@ -4476,3 +4476,85 @@ body .metric-color-swatch input {
   outline: 1px dashed var(--accent);
   outline-offset: -2px;
 }
+
+/* ====================================================================
+ * 44. 本轮：去掉 LIST 拖动排序遗留样式、COMPACT 流量两行新布局、按钮对齐
+ * ==================================================================== */
+
+/* 移除 LIST 拖动排序相关样式 */
+.node-list-row.is-reorderable,
+.node-list-drag-handle,
+.node-list-head-cell[data-col-dragging="true"],
+.node-list-head-cell[data-col-drop-target="true"] {
+  display: none;
+}
+.node-list-row[data-dragging="true"],
+.node-list-row[data-drop-target="true"] {
+  opacity: 1;
+  outline: none;
+}
+
+/* 首页布局按钮与排序按钮完全同尺寸（统一高度、行高、内边距） */
+.home-sort-trigger,
+.home-grid-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-cream);
+  border: var(--border-thin);
+  padding: 6px 12px;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  color: var(--fg-dark);
+  cursor: var(--cur-pointer);
+  min-height: 29px;
+  box-sizing: border-box;
+}
+.home-sort-trigger:hover,
+.home-grid-trigger:hover {
+  background: var(--bg-cream-dark);
+}
+.grid-icon {
+  align-self: center;
+}
+
+/* COMPACT 累计流量：第一行 符号（左）+ 数据（右），第二行 两条曲线 */
+.compact-traffic-total {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.compact-traffic-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.compact-traffic-arrows {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1;
+}
+.compact-traffic-arrows .is-up { color: var(--progress-memory); }
+.compact-traffic-arrows .is-down { color: var(--progress-network); }
+.compact-traffic-head-values {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.compact-traffic-curves {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+.compact-rate-line {
+  display: block;
+  width: 100%;
+  height: 16px;
+}

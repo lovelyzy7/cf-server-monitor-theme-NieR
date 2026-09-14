@@ -118,25 +118,24 @@ function CompactTrafficPulse({ up, down }: { up: TrafficTrendSample[]; down: Tra
   );
 }
 
-function CompactRateSpark({ samples }: { samples: RateSparkSample[] }) {
+function CompactRateLine({ samples, pick, color }: { samples: RateSparkSample[]; pick: (sample: RateSparkSample) => number; color: string }) {
   const W = 72;
-  const H = 18;
-  const build = (pick: (sample: RateSparkSample) => number) => {
-    if (samples.length === 0) return "";
+  const H = 16;
+  let points = "";
+  if (samples.length > 0) {
     const max = Math.max(1, ...samples.map((sample) => Math.max(pick(sample), 0)));
     const pts: string[] = [];
     samples.forEach((sample, index) => {
       const level = Math.max(0, Math.min(1, pick(sample) / max));
       const x = samples.length > 1 ? (index / (samples.length - 1)) * W : W / 2;
-      const y = H - 1.5 - Math.max(0.06, level) * (H - 3);
+      const y = H - 1.5 - Math.max(0.08, level) * (H - 3);
       pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
     });
-    return pts.join(" ");
-  };
+    points = pts.join(" ");
+  }
   return (
-    <svg className="compact-traffic-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
-      <polyline points={build((s) => s.up)} fill="none" stroke="var(--progress-memory)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
-      <polyline points={build((s) => s.down)} fill="none" stroke="var(--progress-network)" strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
+    <svg className="compact-rate-line" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.4" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
@@ -401,11 +400,20 @@ function CompactNodeInfoStrip({
       {showTrafficTotal && (
         <CompactInfoTile label={t("card.totalTraffic")} color="var(--fg-dark)">
           <div className="compact-traffic-total">
-            <span className="compact-traffic-arrow is-up" aria-hidden>↑</span>
-            <CompactRateSpark samples={rateSamples} />
-            <span className="compact-traffic-value tabular">{formatBytes(node.trafficUp)}</span>
-            <span className="compact-traffic-arrow is-down" aria-hidden>↓</span>
-            <span className="compact-traffic-value tabular">{formatBytes(node.trafficDown)}</span>
+            <div className="compact-traffic-head-row">
+              <span className="compact-traffic-arrows" aria-hidden>
+                <span className="is-up">↑</span>
+                <span className="is-down">↓</span>
+              </span>
+              <span className="compact-traffic-head-values">
+                <span className="tabular">{formatBytes(node.trafficUp)}</span>
+                <span className="tabular">{formatBytes(node.trafficDown)}</span>
+              </span>
+            </div>
+            <div className="compact-traffic-curves">
+              <CompactRateLine samples={rateSamples} pick={(sample) => sample.up} color="var(--progress-memory)" />
+              <CompactRateLine samples={rateSamples} pick={(sample) => sample.down} color="var(--progress-network)" />
+            </div>
           </div>
         </CompactInfoTile>
       )}

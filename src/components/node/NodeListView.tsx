@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useRef, useState, type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { memo, useCallback, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "react-router-dom";
 import { clsx } from "clsx";
 import { Flag } from "@/components/ui/Flag";
@@ -10,8 +10,6 @@ import { usePreferences } from "@/hooks/usePreferences";
 import { getLocalThemeSettings, saveLocalThemeSettings } from "@/services/themeSettingsStore";
 import { useMetricColorsVersion } from "@/hooks/useMetricColors";
 import { HOMEPAGE_PING_BUCKET_COUNT } from "@/hooks/usePingOverview";
-import { setListNodeOrder } from "@/services/listNodeOrderStore";
-import { setListColumnOrder, useListColumnOrder } from "@/services/listColumnOrderStore";
 import { useNieRHoverLabel } from "@/components/ui/NieRHoverLabel";
 import { formatBytes } from "@/utils/format";
 import { speedRateColor } from "@/utils/metricTone";
@@ -23,23 +21,14 @@ import { formatOsLabel, joinTagTitle, nodeDetailLinkLabels } from "./nodeCardSha
 import { formatHealthBucketTooltip } from "./pingBucketText";
 import type { PingOverviewTaskLoadState } from "@/types/cfsm";
 
-
 const GAUGE_SEGMENTS = 14;
 
 /* ---- 可拖拽调整的列宽 ---- */
 const DEFAULT_LIST_COLS = [220, 130, 100, 100, 100, 90, 110, 130, 120, 120];
 const LIST_COLS_STORAGE_KEY = "cfsm-nier:list-cols:v1";
 const MIN_COL_WIDTH = 56;
-/** 节点列（始终显示、可拖动排序、不可隐藏）。 */
-const NODE_COLUMN = {
-  key: "node",
-  i18n: "list.node",
-  className: "col-node",
-  lc: 0,
-  def: 220,
-} as const;
 
-/** 列定义：key 对应主题设置 listColumns，lc 对应列宽变量 --lcN。 */
+/** 列定义：key 对应主题设置 listColumns，lc 对应列宽变量 --lcN。节点列固定在最前。 */
 const LIST_COLUMNS = [
   { key: "os", i18n: "list.os", className: "col-os", lc: 1, def: 130 },
   { key: "cpu", i18n: "detail.cpu", className: "col-metric", lc: 2, def: 100 },
@@ -52,7 +41,7 @@ const LIST_COLUMNS = [
   { key: "life", i18n: "list.uptime", className: "col-life", lc: 9, def: 120 },
 ] as const;
 
-type ListColumn = (typeof LIST_COLUMNS)[number] | typeof NODE_COLUMN;
+type ListColumn = (typeof LIST_COLUMNS)[number];
 
 export function isListColumnVisible(
   listColumns: Record<string, boolean>,
@@ -226,28 +215,7 @@ function ListLatency({
   );
 }
 
-const NodeRow = memo(function NodeRow({
-  uuid,
-  hiddenKeys,
-  dragReorderEnabled,
-  dragUuid,
-  colPositions,
-  onDragStartRow,
-  onDragEndRow,
-  onDragOverRow,
-  onDropRow,
-}: {
-  uuid: string;
-  hiddenKeys: ReadonlySet<string>;
-  dragReorderEnabled: boolean;
-  dragUuid: string | null;
-  colPositions: ReadonlyMap<string, number>;
-  onDragStartRow: (uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => void;
-  onDragEndRow: () => void;
-  onDragOverRow: (uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => void;
-  onDropRow: (uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => void;
-}) {
-  const cellStyle = (key: string): CSSProperties => ({ gridColumn: colPositions.get(key) });
+const NodeRow = memo(function NodeRow({ uuid, hiddenKeys }: { uuid: string; hiddenKeys: ReadonlySet<string> }) {
   const { t } = useLanguage();
   const hoverLabel = useNieRHoverLabel();
   const { resolvedAppearance } = usePreferences();
@@ -298,23 +266,14 @@ const NodeRow = memo(function NodeRow({
   return (
     <Link
       to={`/server/${encodeURIComponent(uuid)}`}
-      className={clsx("node-list-row", isOffline && "is-offline", dragReorderEnabled && "is-reorderable")}
+      className={clsx("node-list-row", isOffline && "is-offline")}
       aria-label={rowLabel}
-      draggable={dragReorderEnabled}
-      data-dragging={dragUuid === uuid ? "true" : undefined}
-      data-drop-target={dragUuid != null && dragUuid !== uuid ? "true" : undefined}
-      onDragStart={(event) => onDragStartRow(uuid, event)}
-      onDragEnd={onDragEndRow}
-      onDragOver={(event) => onDragOverRow(uuid, event)}
-      onDragEnter={(event) => onDragOverRow(uuid, event)}
-      onDrop={(event) => onDropRow(uuid, event)}
       onPointerEnter={(event) => hoverLabel.show(event, detailLabels.title)}
       onPointerMove={hoverLabel.move}
       onPointerLeave={hoverLabel.hide}
     >
       {hoverLabel.node}
-      <div className="node-list-node" style={cellStyle("node")}>
-        {dragReorderEnabled && <span className="node-list-drag-handle" aria-hidden>⠿</span>}
+      <div className="node-list-node">
         <div className="node-list-node-text">
           <div className="node-list-node-head">
             <Flag region={node.region} size={14} />
@@ -341,7 +300,7 @@ const NodeRow = memo(function NodeRow({
       </div>
 
       {!hiddenKeys.has("os") && (
-        <div className="col-os" style={cellStyle("os")}>
+        <div className="col-os">
           <OsLogo value={node.os} size={16} />
           <span className="node-list-os-name" title={node.os || osName}>
             {formatOsLabel(osName, node.os)}
@@ -350,36 +309,36 @@ const NodeRow = memo(function NodeRow({
       )}
 
       {!hiddenKeys.has("cpu") && (
-        <div className="col-metric" style={cellStyle("cpu")}>
+        <div className="col-metric">
           <ListGauge value={pctText(node.cpuPct)} fraction={node.cpuPct / 100} paint="var(--progress-cpu)" redrawKey={redrawKey} />
         </div>
       )}
       {!hiddenKeys.has("mem") && (
-        <div className="col-metric" style={cellStyle("mem")}>
+        <div className="col-metric">
           <ListGauge value={pctText(node.ramPct)} fraction={node.ramPct / 100} paint="var(--progress-memory)" redrawKey={redrawKey} />
         </div>
       )}
       {!hiddenKeys.has("disk") && (
-        <div className="col-metric" style={cellStyle("disk")}>
+        <div className="col-metric">
           <ListGauge value={pctText(node.diskPct)} fraction={node.diskPct / 100} paint="var(--progress-disk)" redrawKey={redrawKey} />
         </div>
       )}
 
       {!hiddenKeys.has("load") && (
-        <div className="col-load" style={cellStyle("load")}>
+        <div className="col-load">
           <ListGauge value={node.load1.toFixed(2)} unit="" fraction={loadFraction} paint="var(--progress-load)" redrawKey={redrawKey} />
         </div>
       )}
 
       {!hiddenKeys.has("live") && (
-        <div className="col-live node-list-stack" style={cellStyle("live")}>
+        <div className="col-live node-list-stack">
           <StackLine icon="↑" value={upRate.value} unit={upRate.unit} color={speedRateColor(upRate.unit)} />
           <StackLine icon="↓" value={downRate.value} unit={downRate.unit} color={speedRateColor(downRate.unit)} />
         </div>
       )}
 
       {!hiddenKeys.has("traffic") && (
-        <div className="col-traffic" style={cellStyle("traffic")} title={`剩余 ${traffic.remainingLabel} · ${traffic.detail}`}>
+        <div className="col-traffic" title={`剩余 ${traffic.remainingLabel} · ${traffic.detail}`}>
           <div className="node-list-traffic-rows">
             <StackLine icon="↑" value={formatBytes(node.trafficUp)} />
             <StackLine icon="↓" value={formatBytes(node.trafficDown)} />
@@ -391,7 +350,7 @@ const NodeRow = memo(function NodeRow({
       )}
 
       {!hiddenKeys.has("net") && (
-        <div className="col-net" style={cellStyle("net")}>
+        <div className="col-net">
           <ListLatency
             latency={ping.lastValue}
             loadState={ping.loadState}
@@ -405,7 +364,7 @@ const NodeRow = memo(function NodeRow({
       )}
 
       {!hiddenKeys.has("life") && (
-        <div className="col-life node-list-stack" style={cellStyle("life")}>
+        <div className="col-life node-list-stack">
           <StackLine value={uptime.value} unit={uptime.unit ? t(uptime.unit) : undefined} color="var(--progress-cpu)" />
         </div>
       )}
@@ -413,52 +372,9 @@ const NodeRow = memo(function NodeRow({
   );
 });
 
-export function NodeListView({ uuids, dragReorderEnabled }: { uuids: string[]; dragReorderEnabled: boolean }) {
+export function NodeListView({ uuids }: { uuids: string[] }) {
   const { t } = useLanguage();
   const themeSettings = useThemeSettings();
-  const [dragUuid, setDragUuid] = useState<string | null>(null);
-  const [colDragKey, setColDragKey] = useState<string | null>(null);
-
-  const handleDragStart = useCallback((uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => {
-    // 只允许从首列（节点名）发起拖动，行内其它区域保持正常点选。
-    if (!(event.target as HTMLElement).closest(".node-list-node")) {
-      event.preventDefault();
-      return;
-    }
-    event.dataTransfer.effectAllowed = "move";
-    // Firefox 必须 setData 才会启动拖拽。
-    event.dataTransfer.setData("text/plain", uuid);
-    setDragUuid(uuid);
-  }, []);
-
-  const handleDragEnd = useCallback(() => setDragUuid(null), []);
-
-  const handleDragOver = useCallback((uuid: string, event: ReactDragEvent<HTMLAnchorElement>) => {
-    if (dragUuid != null && dragUuid !== uuid) {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-    }
-  }, [dragUuid]);
-
-  const handleDrop = useCallback((targetUuid: string, event: ReactDragEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    const current = dragUuid;
-    if (!current || current === targetUuid) {
-      setDragUuid(null);
-      return;
-    }
-    const next = [...uuids];
-    const fromIndex = next.indexOf(current);
-    const toIndex = next.indexOf(targetUuid);
-    if (fromIndex < 0 || toIndex < 0) {
-      setDragUuid(null);
-      return;
-    }
-    next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, current);
-    setListNodeOrder(next);
-    setDragUuid(null);
-  }, [dragUuid, uuids]);
   const [cols, setCols] = useState<number[]>(readListCols);
   const colsRef = useRef(cols);
   colsRef.current = cols;
@@ -469,66 +385,6 @@ export function NodeListView({ uuids, dragReorderEnabled }: { uuids: string[]; d
     () => LIST_COLUMNS.filter((column) => isListColumnVisible(themeSettings.listColumns, column.key)),
     [themeSettings.listColumns],
   );
-  const allColumns = useMemo<ListColumn[]>(() => [NODE_COLUMN, ...visibleColumns], [visibleColumns]);
-  const columnOrder = useListColumnOrder();
-  const orderedAllColumns = useMemo(() => {
-    const byKey = new Map<string, ListColumn>(allColumns.map((column) => [column.key, column]));
-    const result: ListColumn[] = [];
-    const used = new Set<string>();
-    for (const key of columnOrder) {
-      const column = byKey.get(key);
-      if (column && !used.has(key)) {
-        result.push(column);
-        used.add(key);
-      }
-    }
-    for (const column of allColumns) {
-      if (!used.has(column.key)) {
-        result.push(column);
-        used.add(column.key);
-      }
-    }
-    return result;
-  }, [allColumns, columnOrder]);
-  const colPositions = useMemo(
-    () => new Map(orderedAllColumns.map((column, index) => [column.key, index + 1])),
-    [orderedAllColumns],
-  );
-
-  const handleColumnDragStart = useCallback((key: string, event: ReactDragEvent<HTMLDivElement>) => {
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("application/x-col", key);
-    setColDragKey(key);
-  }, []);
-
-  const handleColumnDragEnd = useCallback(() => setColDragKey(null), []);
-
-  const handleColumnDragOver = useCallback((targetKey: string, event: ReactDragEvent<HTMLDivElement>) => {
-    if (colDragKey != null && colDragKey !== targetKey) {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
-    }
-  }, [colDragKey]);
-
-  const handleColumnDrop = useCallback((targetKey: string, event: ReactDragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const current = colDragKey;
-    if (!current || current === targetKey) {
-      setColDragKey(null);
-      return;
-    }
-    const next = orderedAllColumns.map((column) => column.key);
-    const fromIndex = next.indexOf(current as (typeof next)[number]);
-    const toIndex = next.indexOf(targetKey as (typeof next)[number]);
-    if (fromIndex < 0 || toIndex < 0) {
-      setColDragKey(null);
-      return;
-    }
-    next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, current as (typeof next)[number]);
-    setListColumnOrder(next);
-    setColDragKey(null);
-  }, [colDragKey, orderedAllColumns]);
   const hiddenKeys = useMemo(() => {
     const set = new Set<string>();
     for (const column of LIST_COLUMNS) {
@@ -542,11 +398,14 @@ export function NodeListView({ uuids, dragReorderEnabled }: { uuids: string[]; d
     cols.forEach((width, index) => {
       vars[`--lc${index}`] = `${width}px`;
     });
-    // 列模板按当前顺序拼出（节点列参与排序），隐藏列不占轨道。
-    const parts = orderedAllColumns.map((column) => `var(--lc${column.lc}, ${column.def}px)`);
+    // 列模板：节点列 + 可见列，隐藏列不占轨道。
+    const parts = ["var(--lc0, 220px)"];
+    for (const column of visibleColumns) {
+      parts.push(`var(--lc${column.lc}, ${column.def}px)`);
+    }
     vars["--node-list-template"] = parts.join(" ");
     return vars as CSSProperties;
-  }, [cols, orderedAllColumns]);
+  }, [cols, visibleColumns]);
 
   const onHandlePointerDown = (index: number) => (event: ReactPointerEvent<HTMLSpanElement>) => {
     event.preventDefault();
@@ -563,7 +422,7 @@ export function NodeListView({ uuids, dragReorderEnabled }: { uuids: string[]; d
     const drag = dragRef.current;
     if (!drag) return;
     const dx = event.clientX - drag.startX;
-    // 4px 吸附，拖动更跟手；列宽实时生效，内容（延迟柱）随宽度自适应。
+    // 4px 吸附，拖动更跟手；列宽实时生效，延迟柱随宽度同步放大。
     const nextWidth = Math.max(MIN_COL_WIDTH, Math.round((drag.startWidth + dx) / 4) * 4);
     setCols((prev) => prev.map((width, index) => (index === drag.index ? nextWidth : width)));
   };
@@ -579,7 +438,6 @@ export function NodeListView({ uuids, dragReorderEnabled }: { uuids: string[]; d
   const resetTableStyle = () => {
     setCols(DEFAULT_LIST_COLS);
     writeListCols(DEFAULT_LIST_COLS);
-    setListColumnOrder([]);
     const current = getLocalThemeSettings() as Record<string, unknown>;
     if (current.listColumns != null) {
       const next = { ...current };
@@ -597,26 +455,13 @@ export function NodeListView({ uuids, dragReorderEnabled }: { uuids: string[]; d
       </div>
       <div className="node-list-scroll">
         <div className="node-list" style={colVars}>
-        <div className="node-list-row node-list-head">
-          {orderedAllColumns.map((column) => (
-            <div
-              key={column.key}
-              className={`node-list-cell node-list-head-cell ${column.className}`}
-              style={{ gridColumn: colPositions.get(column.key) }}
-              draggable
-              data-col-dragging={colDragKey === column.key ? "true" : undefined}
-              data-col-drop-target={colDragKey != null && colDragKey !== column.key ? "true" : undefined}
-              onDragStart={(event) => handleColumnDragStart(column.key, event)}
-              onDragEnd={handleColumnDragEnd}
-              onDragOver={(event) => handleColumnDragOver(column.key, event)}
-              onDragEnter={(event) => handleColumnDragOver(column.key, event)}
-              onDrop={(event) => handleColumnDrop(column.key, event)}
-            >
-              {t(column.i18n)}
-              {column.key === "node" && dragReorderEnabled && (
-                <span className="node-list-drag-handle" aria-hidden title={t("list.dragRowsHint")}>⠿</span>
-              )}
-              {column.key !== "node" && (
+          <div className="node-list-row node-list-head" aria-hidden>
+            <div className="node-list-cell node-list-head-cell">
+              {t("list.node")}
+            </div>
+            {visibleColumns.map((column) => (
+              <div key={column.key} className={`node-list-cell node-list-head-cell ${column.className}`}>
+                {t(column.i18n)}
                 <span
                   className={`node-list-resize-handle${draggingCol === column.lc ? " is-dragging" : ""}`}
                   role="separator"
@@ -627,25 +472,13 @@ export function NodeListView({ uuids, dragReorderEnabled }: { uuids: string[]; d
                   onPointerUp={onHandlePointerUp}
                   onPointerCancel={onHandlePointerUp}
                 />
-              )}
-            </div>
+              </div>
+            ))}
+          </div>
+          {uuids.map((uuid) => (
+            <NodeRow key={uuid} uuid={uuid} hiddenKeys={hiddenKeys} />
           ))}
         </div>
-        {uuids.map((uuid) => (
-          <NodeRow
-            key={uuid}
-            uuid={uuid}
-            hiddenKeys={hiddenKeys}
-            dragReorderEnabled={dragReorderEnabled}
-            dragUuid={dragUuid}
-            colPositions={colPositions}
-            onDragStartRow={handleDragStart}
-            onDragEndRow={handleDragEnd}
-            onDragOverRow={handleDragOver}
-            onDropRow={handleDrop}
-          />
-        ))}
-      </div>
       </div>
     </div>
   );
