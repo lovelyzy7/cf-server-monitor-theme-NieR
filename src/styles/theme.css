@@ -4394,13 +4394,16 @@ body .metric-color-swatch input {
 .home-grid-panel {
   right: 0;
   min-width: 150px;
+  max-width: min(240px, calc(100vw - 24px));
 }
 @media (max-width: 720px) {
   .home-controls-bar {
     flex-wrap: wrap;
+    justify-content: flex-end;
   }
+  /* 布局 + 排序始终靠右：左侧是分组页签，右侧固定放控件 */
   .home-controls-right {
-    margin-left: 0;
+    margin-left: auto;
   }
 }
 
