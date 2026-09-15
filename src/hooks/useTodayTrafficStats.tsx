@@ -288,11 +288,16 @@ async function loadTodayTrafficByNode(
   endMs: number,
   signal: AbortSignal,
   mode: TodayTrafficQueryMode,
+  maxRangeHours?: number,
 ): Promise<Pick<TodayTrafficStatsResponse, "rows" | "samplesByUuid">> {
   throwIfSignalAborted(signal);
   const rows: TodayTrafficStat[] = [];
   const samplesByUuid: Record<string, TodayTrafficSample[]> = {};
-  const rangeHours = getTodayTrafficRecordRangeHours(startMs, endMs);
+  // 访客（未登录）后端拒绝 >24h 的历史查询：按上限收敛档位。
+  const rangeHours = Math.min(
+    getTodayTrafficRecordRangeHours(startMs, endMs),
+    maxRangeHours ?? Number.POSITIVE_INFINITY,
+  );
   let failureCount = 0;
   let firstFailure: unknown = null;
   for (let index = 0; index < uuids.length; index += NODE_QUERY_CONCURRENCY) {
@@ -341,16 +346,17 @@ function getTodayTrafficQueryOptions(
   uuids: string[],
   now: number,
   mode: TodayTrafficQueryMode,
+  maxRangeHours?: number,
 ) {
   const stableUuids = [...new Set(uuids)].sort();
   const startMs = localDayStartMs(now);
   const uuidSignature = stableUuids.join(",");
 
   return queryOptions({
-    queryKey: ["traffic-stats", "today", startMs, mode, uuidSignature],
+    queryKey: ["traffic-stats", "today", startMs, mode, uuidSignature, maxRangeHours ?? 0],
     queryFn: async ({ signal }): Promise<TodayTrafficStatsResponse> => {
       const endMs = Date.now();
-      const data = await loadTodayTrafficByNode(stableUuids, startMs, endMs, signal, mode);
+      const data = await loadTodayTrafficByNode(stableUuids, startMs, endMs, signal, mode, maxRangeHours);
       return {
         ...data,
         rangeStartMs: startMs,
@@ -374,8 +380,9 @@ export function useTodayTrafficStats(
   uuids: string[],
   now: number,
   mode: TodayTrafficQueryMode = "full",
+  maxRangeHours?: number,
 ) {
-  return useQuery(getTodayTrafficQueryOptions(uuids, now, mode));
+  return useQuery(getTodayTrafficQueryOptions(uuids, now, mode, maxRangeHours));
 }
 
 export function preloadTodayTrafficStats(

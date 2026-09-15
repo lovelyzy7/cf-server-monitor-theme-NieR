@@ -391,7 +391,8 @@ export function Traffic() {
   const dayEndMs = isRolling24h ? now : dayStartMs + DAY_MS;
 
   // 初始只取汇总（summary 模式跳过样本构建），展开某台节点时再按需拉明细。
-  const todayQuery = useTodayTrafficStats(uuids, now, "summary");
+  // 访客（含登录态未返回时）收敛到 24h 档位：后端匿名拒绝 >24h 的历史查询。
+  const todayQuery = useTodayTrafficStats(uuids, now, "summary", me?.logged_in ? undefined : 24);
   // 往期：逐节点拉对应档位历史，按当天窗口积分（与今日同一套口径）。
   const hours = isRolling24h ? 24 : hoursTierForRange(dayStartMs, dayEndMs);
   const pastQueries = useQueries({
